@@ -2,21 +2,24 @@
 //Prueba 1, cambiar estado de un led
 
 #include <WiFi.h> // Para el ESP32
-WiFiClient WIFI_CLIENT;
-#include <PubSubClient.h>
+WiFiClient WIFI_CLIENT; //Libreria Wifi
+#include <PubSubClient.h> //Libreria para metodo MQTT
+#include <TimeLib.h> //Libreria del Reloj
 PubSubClient MQTT_CLIENT;
 
 const char* ssid = "Leouu"; //Nombre del Wifi
 const char* password = "leo12345A"; //Contraseña del wifi
 
-const byte LED = 5; // LED ESP32
-//const byte LED2 = 18; // LED ESP32
-
-String LED_status = "- ? -";
+const byte LED = 13; // LED ESP32
 
 void setup() {
+  
+  //Configuracion del reloj
+  setTime(0, 0, 0, 29, 3, 22); //hr,mm,ss,d,m,y
+
+  //Configuracion del ESP32
   pinMode(LED, OUTPUT); //LED como salida
-  // pinMode(LED2, OUTPUT); //LED como salida
+  
   Serial.begin(115200); //Inicializa el serial begin a 115200
   delay(10);
   Serial.println();
@@ -39,53 +42,51 @@ void setup() {
   MQTT_CLIENT.setCallback(callback);
 }
 
-
-
 // Funcion a seguir cuando recive la informacion
 void callback(char* recibido, byte* payload, unsigned int length) {
+  char receivedChar;
+  String var;
   Serial.print("Message received: ");
   Serial.print(recibido);
   Serial.print("   ");
-  //for (int i=0;i<length;i++) {
-  char receivedChar = (char)payload[0];
-  Serial.print(receivedChar);
-
-  if (receivedChar == '0') {
-    digitalWrite(LED, LOW);
-  }
-  if (receivedChar == '1') {
-    digitalWrite(LED, HIGH);
-  }
-
-  if (digitalRead(LED) == HIGH) {
-    LED_status = "LED ON";
-  } else {
-    LED_status = "LED OFF";
-  }
-  /*
-    if (receivedChar == '2') {
-    //Serial.print("ON\n");
-    digitalWrite(LED2, HIGH);
-    }
-    if (receivedChar == '3') {
-    digitalWrite(LED2, LOW);
-    }
-  */
-  //}
-  Serial.println();
+  
+  for (int i = 0; i < length; i++) {
+   receivedChar = (char)payload[i];
+   (var).concat(receivedChar);
+   Serial.println(payload[i]);
+ }
+ Serial.println(var);
+ menu(var);
 }
 
 void loop() {
   if (!MQTT_CLIENT.connected()) {
     reconnect();
   }
-  
-  char led_st[10];
-  LED_status.toCharArray(led_st, 10);
-  MQTT_CLIENT.publish("Leo/LED_status", led_st);
+  //reloj();
   delay(1000);
-
   MQTT_CLIENT.loop(); // Testea la suscripcion
+}
+
+void menu(String dato) {
+  if (dato == "001") {
+    digitalWrite(LED, HIGH);
+    Serial.print("Led Encendido");
+  }
+  if (dato == "002") {
+    Serial.print("Led Apagado");
+    digitalWrite(LED, LOW);
+  }
+}
+
+String dato(int digit) {
+  String dt = String("0") + digit;
+  return dt.substring(dt.length() - 2);
+}
+
+void reloj () {
+  String tiempo = String (hour()) + ";" + dato(minute()) + ":" + dato(second());
+  Serial.println(tiempo);
 }
 
 // Reconecta con MQTT broker
@@ -98,9 +99,8 @@ void reconnect() {
   while (!MQTT_CLIENT.connected()) {
     Serial.println("Trying to connect with Broker MQTT.");
     MQTT_CLIENT.connect("LeoIsleno");
-
-    MQTT_CLIENT.subscribe("Leo/LED_status"); // Aca realiza la suscripcion
-  //  MQTT_CLIENT.subscribe("Leo/boton2"); // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Leo/Tomates"); // Aca realiza la suscripcion
+    //MQTT_CLIENT.subscribe("Leo/Cebollas");
 
     // Espera para que conecte denuevo
     delay(3000);
