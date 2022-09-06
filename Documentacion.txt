@@ -1,0 +1,7 @@
+https://www.youtube.com/watch?v=WAimZhU5phs
+https://community.appinventor.mit.edu/t/esp32-mqtt-broker-publish-subscribe-thingspeak/10490/7
+
+Publish: 
+https://forum.arduino.cc/t/initializer-string-for-array-of-chars-is-too-long-fpermissive/486437
+http://www.steves-internet-guide.com/using-arduino-pubsub-mqtt-client/
+https://www.youtube.com/watch?v=zmcjHS5624k
