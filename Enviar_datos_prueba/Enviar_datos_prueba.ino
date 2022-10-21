@@ -62,25 +62,26 @@ void setup() {
 
 // Funcion a seguir cuando recive la informacion
 void callback(char* recibido, byte* payload, unsigned int length) {
-  char receivedChar;
+  int receivedInt;
+  int num;
   String var;
   Serial.print("Message received: ");
   Serial.print(recibido);
   Serial.print("   ");
 
   for (int i = 0; i < length; i++) {
-    receivedChar = (char)payload[i];
-    (var).concat(receivedChar); //Une todo el codigo segmentado en uno mismo y lo guarda como String
+    receivedInt = (char)payload[i] - '0';
+    (var).concat(receivedInt); //Une todo el codigo segmentado en uno mismo y lo guarda como String
   }
   Serial.println(var);
-  menu(var);
+  menu(receivedInt);
 }
 
 void loop() {
   if (!MQTT_CLIENT.connected()) {
     reconnect();
   }
-  mediciones();
+  //mediciones();
   delay(1000);
   MQTT_CLIENT.loop(); // Testea la suscripcion
 }
@@ -99,20 +100,20 @@ void mediciones() {
   Serial.println(lectura_sensorSuelo2);
   lectura_sensorSuelo3 = analogRead(sensorSuelo3);
   Serial.println(lectura_sensorSuelo3);
-  
-  lectura_fotoresistencia = (lectura_fotoresistencia/4095)*100;
+
+  lectura_fotoresistencia = (lectura_fotoresistencia / 4095) * 100;
   Serial.print("Valor de la fotoresistencia: ");
   Serial.println(lectura_fotoresistencia);
   delay(5000);
 
-  if (lectura_fotoresistencia > 50){
-    digitalWrite(LED1,HIGH);
-    digitalWrite(LED2,LOW);
+  if (lectura_fotoresistencia > 50) {
+    digitalWrite(LED1, HIGH);
+    digitalWrite(LED2, LOW);
   }
-  else{
-    digitalWrite(LED2,HIGH);
-    digitalWrite(LED1,LOW);
-    }
+  else {
+    digitalWrite(LED2, HIGH);
+    digitalWrite(LED1, LOW);
+  }
 
   String dato = String(lectura_fotoresistencia); //Se convierte el tipo de variable de int a String
   char a[1];
@@ -122,20 +123,22 @@ void mediciones() {
   //return dato;
 }
 
-void menu(String dato) {
-  if (dato == "001") {
-    digitalWrite(LED, HIGH);
-    Serial.print("Led Encendido");
-
-  }
-  if (dato == "002") {
-    Serial.print("Led Apagado");
-    digitalWrite(LED, LOW);
-  }
-  if (dato = "9") {
-    Serial.println("No se selecciono ninguna verdura");
+void menu(int dato) {
+  switch (dato) {
+    case 001:
+      digitalWrite(LED, HIGH);
+      Serial.print("Led Encendido");
+      break;
+    case 002:
+      Serial.print("Led Apagado");
+      digitalWrite(LED, LOW);
+      break;
+    default:
+      Serial.println("No se selecciono ninguna verdura");
+      break ;
   }
 }
+
 
 String dato(int digit) {
   String dt = String("0") + digit;
