@@ -11,11 +11,14 @@ const char* password = "leo12345A"; //Contraseña del wifi
 
 const byte LED = 13; // LED ESP32
 
-const int fotoresistencia = 32;
-const int sensorTemperatura = 35;
-const int sensorSuelo = 34;
-const int relay = 19;
-int lectura;
+const int fotoresistencia = 36;
+const int LED1 = 2;
+const int LED2 = 4;
+const int sensorSuelo3 = 35;
+const int sensorSuelo2 = 34;
+const int sensorSuelo1 = 32;
+//const int relay = 19;
+
 
 void setup() {
 
@@ -26,10 +29,13 @@ void setup() {
   pinMode(LED, OUTPUT); //LED como salida
 
   /*Iniciamos el terminal Serial a una velocidad de 115200, junto a un retardo de 1 segundo y definimos los pines a utilizar*/
-  pinMode(32, INPUT); //Configuramos fotoresistencia como entrada o INPUT
-  pinMode(35, INPUT); //Configuramos sensor Temperatura como entrada o INPUT
-  pinMode(34, INPUT); //Configuramos sensor de Suelo como entrada o INPUT
-  pinMode(relay, OUTPUT); // Configurar relay como salida o OUTPUT
+  pinMode(fotoresistencia, INPUT); //Configuramos fotoresistencia como entrada o INPUT
+  //pinMode(sensorSuelo1, INPUT); //Configuramos sensor Temperatura como entrada o INPUT
+  //pinMode(sensorSuelo2, INPUT); //Configuramos sensor Temperatura como entrada o INPUT
+  //pinMode(sensorSuelo3, INPUT); //Configuramos sensor Temperatura como entrada o INPUT
+  //pinMode(34, INPUT); //Configuramos sensor de Suelo como entrada o INPUT
+  pinMode(LED1, OUTPUT); // Configurar relay como salida o OUTPUT
+  pinMode(LED2, OUTPUT); // Configurar relay como salida o OUTPUT
 
   Serial.begin(115200); //Inicializa el serial begin a 115200
   delay(1000); // 1 segundo
@@ -74,46 +80,46 @@ void loop() {
   if (!MQTT_CLIENT.connected()) {
     reconnect();
   }
-  //reloj();
-
-  int aleatorio = random(1, 90);  //Se crea una variable aleatorio dentro de los numero de 1 y 90
-  String aleatorioString = String(aleatorio); //Se convierte el tipo de variable de int a String
-  char alea[6];
-  aleatorioString.toCharArray(alea, 6); //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
-
-  MQTT_CLIENT.publish("Leo/Datos", alea); //Envia la informacion dentro del arreglo char
-
-  String dato = "Hola Mundo";
-  char a[12];
-  dato.toCharArray(a, 12); //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
-  
-  MQTT_CLIENT.publish("Leo/Informacion", a); //Envia la informacion dentro del arreglo char
-
-  delay(2000);
+  mediciones();
+  delay(1000);
   MQTT_CLIENT.loop(); // Testea la suscripcion
 }
 
 void mediciones() {
+  float lectura_fotoresistencia;
+  int lectura_sensorSuelo1;
+  int lectura_sensorSuelo2;
+  int lectura_sensorSuelo3;
   Serial.println("====================================");
-  lectura = analogRead(fotoresistencia);
+  lectura_fotoresistencia = analogRead(fotoresistencia);
+  //Serial.println(lectura);
+  lectura_sensorSuelo1 = analogRead(sensorSuelo1);
+  Serial.println(lectura_sensorSuelo1);
+  lectura_sensorSuelo2 = analogRead(sensorSuelo2);
+  Serial.println(lectura_sensorSuelo2);
+  lectura_sensorSuelo3 = analogRead(sensorSuelo3);
+  Serial.println(lectura_sensorSuelo3);
+  
+  lectura_fotoresistencia = (lectura_fotoresistencia/4095)*100;
   Serial.print("Valor de la fotoresistencia: ");
-  Serial.println(lectura);
-  lectura = analogRead(sensorTemperatura);
-  Serial.print("Valor del sensor de temperatura: ");
-  Serial.println(lectura);
-  lectura = analogRead(sensorSuelo);
-  Serial.print("Valor del sensor de suelo: ");
-  Serial.println(lectura);
-  delay(2000);
+  Serial.println(lectura_fotoresistencia);
+  delay(5000);
 
-  //Prueba de Modulos Relay
-  digitalWrite(relay, HIGH); // envia señal alta al relay
-  Serial.println("Relay accionado");
-  delay(1000);           // 1 segundo
+  if (lectura_fotoresistencia > 50){
+    digitalWrite(LED1,HIGH);
+    digitalWrite(LED2,LOW);
+  }
+  else{
+    digitalWrite(LED2,HIGH);
+    digitalWrite(LED1,LOW);
+    }
 
-  digitalWrite(relay, LOW);  // envia señal baja al relay
-  Serial.println("Relay no accionado");
-  delay(1000);           // 1 segundo
+  String dato = String(lectura_fotoresistencia); //Se convierte el tipo de variable de int a String
+  char a[1];
+  dato.toCharArray(a, 12); //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
+  Serial.println(a);
+  MQTT_CLIENT.publish("Leo/Informacion", a); //Envia la informacion dentro del arreglo char
+  //return dato;
 }
 
 void menu(String dato) {
