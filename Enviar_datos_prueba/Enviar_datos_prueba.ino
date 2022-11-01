@@ -31,11 +31,6 @@ void setup() {
   setTime(0, 0, 0, 29, 3, 22); //hr,mm,ss,d,m,y
 
   /*Iniciamos el terminal Serial a una velocidad de 115200, junto a un retardo de 1 segundo y definimos los pines a utilizar*/
-  pinMode(fotoresistencia, INPUT); //Configuramos fotoresistencia como entrada o INPUT
-  //pinMode(sensorSuelo1, INPUT); //Configuramos sensor Temperatura como entrada o INPUT
-  //pinMode(sensorSuelo2, INPUT); //Configuramos sensor Temperatura como entrada o INPUT
-  //pinMode(sensorSuelo3, INPUT); //Configuramos sensor Temperatura como entrada o INPUT
-  //pinMode(34, INPUT); //Configuramos sensor de Suelo como entrada o INPUT
   pinMode(LED1, OUTPUT); // Configurar relay como salida o OUTPUT
   pinMode(LED2, OUTPUT); // Configurar relay como salida o OUTPUT
 
@@ -77,8 +72,7 @@ void callback(char* recibido, byte* payload, unsigned int length) {
   }
   //num = var.toInt
   if (recibido == "Leo/Fecha"){
-    Serial.println("Fecha:");
-    Serial.println(var);
+    
   }
   else{
     Serial.println(var);
@@ -126,25 +120,6 @@ void mediciones() {
 
     //lectura_fotoresistencia = (lectura_fotoresistencia ;
     //Serial.print("Valor de la fotoresistencia: ");
-
-
-    if (lectura_fotoresistencia > 50) {
-    digitalWrite(LED1, HIGH);
-    digitalWrite(LED2, LOW);
-    }
-    else {
-    digitalWrite(LED2, HIGH);
-    digitalWrite(LED1, LOW);
-    }
-    lecturaAnalog[1] = (analogRead(fotoresistencia)/ 4095) * 100;
-    Serial.println(lecturaAnalog[1]);
-    lecturaAnalog[2] = analogRead(sensorTemp) * 0.1;  //  10mv/°C
-    Serial.println(lecturaAnalog[2]);
-
-    /*
-    for (int i = 0; i < TAM; i ++){
-
-    }
   */
   Serial.println("<====================================>");
   Serial.println("Valores de publish");
@@ -169,33 +144,6 @@ void mediciones() {
   //return lectura_sensorTemp;
 }
 
-void menu(int dato) {
-  switch (dato) {
-    case 1:
-      digitalWrite(LED1, HIGH);
-      Serial.println("Led Encendido");
-      break;
-    case 2:
-      Serial.println("Led Apagado");
-      digitalWrite(LED1, LOW);
-      break;
-    default:
-      Serial.println("No se selecciono ninguna verdura");
-      break ;
-  }
-}
-
-
-String dato(int digit) {
-  String dt = String("0") + digit;
-  return dt.substring(dt.length() - 2);
-}
-
-void reloj () {
-  String tiempo = String (hour()) + ";" + dato(minute()) + ":" + dato(second());
-  Serial.println(tiempo);
-}
-
 // Reconecta con MQTT broker
 void reconnect() {
   MQTT_CLIENT.setServer("broker.hivemq.com", 1883);  //IP y Puerto Utilizados
@@ -209,7 +157,6 @@ void reconnect() {
     MQTT_CLIENT.subscribe("Leo/Tomates"); // Aca realiza la suscripcion
     MQTT_CLIENT.subscribe("Leo/Cebollas"); // Aca realiza la suscripcion
     MQTT_CLIENT.subscribe("Leo/Fecha"); // Aca realiza la suscripcion
-    MQTT_CLIENT.subscribe("Fecha"); // Aca realiza la suscripcion
 
     // Espera para que conecte denuevo
     delay(3000);
