@@ -1,19 +1,17 @@
-//Se envio diferentes tipo de valores desde el ESP32 a Mi App Inventor
 /*
- * 26/10/22 - Se implemento el envio de 2 sensores al mismo tiempo a mi App Inventor sin problemas.
- * Apartir del topic recibido por el ESP32 se pueden difereneciar las acciones a trabajar
- * Se logro enviar formato Fecha al ESP32 para luego trabajarla para el calculo de cosecha
- * Variable nueva aprender: parceInt() - Link: https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjqs4nutv76AhXcrJUCHZsZBokQFnoECBAQAQ&url=https%3A%2F%2Fwww.arduino.cc%2Freference%2Fes%2Flanguage%2Ffunctions%2Fcommunication%2Fserial%2Fparseint&usg=AOvVaw0YJv_LhYxHrFJglwGjwFph
+ * 4/11/22 - Se implemento el envio de la fecha a cosechar al app inventor
+ * Todos los datos de los sensores se envian correctamente y se reciben los valores correspondientes
+ * Proximamente se dividira los sectores para activar los correspondientes sensores segun el sector a trabajar. 
 */
 
-#include <WiFi.h> // Para el ESP32
-WiFiClient WIFI_CLIENT; //Libreria Wifi
-#include <PubSubClient.h> //Libreria para metodo MQTT
-#include <TimeLib.h> //Libreria del Reloj
+#include <WiFi.h>          // Para el ESP32
+WiFiClient WIFI_CLIENT;    //Libreria Wifi
+#include <PubSubClient.h>  //Libreria para metodo MQTT
+#include <TimeLib.h>       //Libreria del Reloj
 PubSubClient MQTT_CLIENT;
 
-const char* ssid = "Leouu"; //Nombre del Wifi
-const char* password = "leo12345B"; //Contraseña del wifi
+const char* ssid = "Leouu";          //Nombre del Wifi
+const char* password = "leo12345B";  //Contraseña del wifi
 
 const int fotoresistencia = 39;
 const int LED1 = 2;
@@ -24,28 +22,30 @@ const int sensorSuelo1 = 32;
 const int sensorTemp = 33;
 //const int relay = 19;
 
+void recived(String topic, String valor);
 
 void setup() {
 
   //Configuracion del reloj
-  setTime(0, 0, 0, 29, 3, 22); //hr,mm,ss,d,m,y
+  setTime(0, 0, 0, 29, 3, 22);  //hr,mm,ss,d,m,y
 
   /*Iniciamos el terminal Serial a una velocidad de 115200, junto a un retardo de 1 segundo y definimos los pines a utilizar*/
-  pinMode(LED1, OUTPUT); // Configurar relay como salida o OUTPUT
-  pinMode(LED2, OUTPUT); // Configurar relay como salida o OUTPUT
+  pinMode(LED1, OUTPUT);  // Configurar relay como salida o OUTPUT
+  pinMode(LED2, OUTPUT);  // Configurar relay como salida o OUTPUT
 
-  Serial.begin(115200); //Inicializa el serial begin a 115200
-  delay(1000); // 1 segundo
+  pinMode(fotoresistencia, INPUT);  // Configurar relay como salida o OUTPUT
+
+  Serial.begin(115200);  //Inicializa el serial begin a 115200
+  delay(1000);           // 1 segundo
   Serial.println("Sensores Instalados y listos");
   Serial.println();
   Serial.print("Conectando con ");
   Serial.println(ssid);
 
-  WiFi.begin(ssid, password); //Inicializa el modulo WIFI
-
+  WiFi.begin(ssid, password);  //Inicializa el modulo WIFI
+  Serial.print("Conectando");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print("Conectando");
     Serial.print(".");
   }
 
@@ -61,24 +61,23 @@ void setup() {
 void callback(char* recibido, byte* payload, unsigned int length) {
   int receivedInt;
   String var;
-  int num;
+
   Serial.print("Message received: ");
   Serial.print(recibido);
   Serial.print("   ");
 
+  String recibidoStr = String(recibido);
+
   for (int i = 0; i < length; i++) {
-    receivedInt = (char)payload[i] - '0'; //Convierte de Char to int
-    (var).concat(receivedInt); // Une todo el codigo segmentado en uno mismo y lo guarda como Int, de momento no se utiliza al no tener gran variedad de plantas a utilizar
+    receivedInt = (char)payload[i] - '0';  //Convierte de Char to int
+    (var).concat(receivedInt);             // Une todo el codigo segmentado en uno mismo y lo guarda como Int, de momento no se utiliza al no tener gran variedad de plantas a utilizar
   }
-  //num = var.toInt
-  if (recibido == "Leo/Fecha"){
-    
-  }
-  else{
-    Serial.println(var);
-  }
-  //Serial.println(var);
-  //menu(receivedInt);
+
+  Serial.print("Codigo concatenado: ");
+  Serial.println(var);
+  Serial.println("  ");
+
+  recived(recibidoStr, var);  //Topic - Valor recibido
 }
 void loop() {
   if (!MQTT_CLIENT.connected()) {
@@ -91,57 +90,77 @@ void loop() {
     Serial.println(a);
     MQTT_CLIENT.publish("Leo/Informacion", a); //Envia la informacion dentro del arreglo char
   */
-  mediciones();
-  delay(1000);
-  MQTT_CLIENT.loop(); // Testea la suscripcion
+  delay(5000);
+  MQTT_CLIENT.loop();  // Testea la suscripcion
 }
 
-void mediciones() {
-  float lectura_fotoresistencia, lectura_sensorTemp;
-  int lectura_sensorSuelo1, lectura_sensorSuelo2, lectura_sensorSuelo3, TAM = 3;
-  int lecturaAnalog[5];
+void recived(String topic, String valor) {
+  int flagStateTomates;
+  int eleccion = 0;
 
-  //Lectura de los sensores
-  Serial.println(">====================================<");
+  flagStateTomates = 0;
 
-  lectura_fotoresistencia = analogRead(fotoresistencia); //(analogRead(fotoresistencia)/ 4095) * 100; // PIN 39
-  lectura_sensorSuelo1 = analogRead(sensorSuelo1);
-  lectura_sensorSuelo2 = analogRead(sensorSuelo2);
-  lectura_sensorSuelo3 = analogRead(sensorSuelo3);
-  lectura_sensorTemp = analogRead(sensorTemp) * 0.1;  //  10mv/°C PIN 33
-  Serial.println(lectura_fotoresistencia);
-  /*
-    //Muestra de datos
-    //Serial.println(lectura);
-    //Serial.println(lectura_sensorSuelo1);
-    //Serial.println(lectura_sensorSuelo2);
-    //Serial.println(lectura_sensorSuelo3);
-    //Serial.println(lectura_sensorTemp);
+  if (topic == "Tomates/Fecha") {
+    eleccion = 1;
+    Serial.print("Codigo recibido: ");
+    Serial.println(eleccion);
+    Serial.println("  ");
 
-    //lectura_fotoresistencia = (lectura_fotoresistencia ;
-    //Serial.print("Valor de la fotoresistencia: ");
-  */
-  Serial.println("<====================================>");
-  Serial.println("Valores de publish");
+    Serial.print("Fecha de cultivo elegido:");
+    Serial.println(valor);
+    Serial.println("  ");
 
-  //Publish de todos los valores de los sensores analogicos
-  
-  String dato1 = String(lectura_sensorTemp); //Se convierte el tipo de variable de int a String
-  char a[1];
-  dato1.toCharArray(a, 12); //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
-  Serial.println(a);
-  MQTT_CLIENT.publish("Inf/SensorTemperatura", a); //Envia la informacion dentro del arreglo char
+    seleccion_cultivo(eleccion, valor);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+}
 
-  delay(500);
+void seleccion_cultivo(int eleccion, String Fecha) {
+  int cantMes;
+  String fechaCosechada;
 
-  String dato2 = String(lectura_fotoresistencia); //Se convierte el tipo de variable de int a String
-  char b[1];
-  dato2.toCharArray(b, 12); //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
-  Serial.println(b);
-  MQTT_CLIENT.publish("Inf/Fotoresistencia", b); //Envia la informacion dentro del arreglo char
+  switch (eleccion) {
+    case 1:         //Eleccion de Tomates
+      cantMes = 4;  //Se cosecha luego de los 4 meses
+      Serial.println("Comenzando el calculo de la cosecha de Tomates...");
+      Serial.println("  ");
+      fechaCosechada = fecha_cosecha(Fecha, cantMes);
+      Serial.print("Fecha de cosecha: ");
+      Serial.println(fechaCosechada);
+      
+      char a[1];
+      fechaCosechada.toCharArray(a, 12);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
+      Serial.print("Dato enviado: ");
+      Serial.println(a);
+      MQTT_CLIENT.publish("Fecha/cosecha", a);  //Envia la informacion dentro del arreglo char
+      delay(500);
+      break;
+  }
+}
 
-  delay(5000);  
-  //return lectura_sensorTemp;
+String fecha_cosecha(String Fecha, int cantMes) {
+  int dia, mes, anio;
+  String var;
+  String dato;
+
+  var = Fecha.substring(0, 3);
+  dia = var.toInt();
+  var = Fecha.substring(3, 6);
+  mes = var.toInt();
+  var = Fecha.substring(6, 9);
+  anio = var.toInt();
+
+  if (mes < 12) {
+    mes = mes - 12;
+    anio = anio + 1;
+  }
+
+  dato.concat(dia);
+  dato.concat("/");
+  dato.concat(mes + cantMes);
+  dato.concat("/");
+  dato.concat(anio);
+
+  return dato;
 }
 
 // Reconecta con MQTT broker
@@ -154,9 +173,9 @@ void reconnect() {
   while (!MQTT_CLIENT.connected()) {
     Serial.println("Trying to connect with Broker MQTT.");
     MQTT_CLIENT.connect("LeoIsleno");
-    MQTT_CLIENT.subscribe("Leo/Tomates"); // Aca realiza la suscripcion
-    MQTT_CLIENT.subscribe("Leo/Cebollas"); // Aca realiza la suscripcion
-    MQTT_CLIENT.subscribe("Leo/Fecha"); // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Tomates/Fecha");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Leo/Cebollas");   // Aca realiza la suscripcion
+                                             // MQTT_CLIENT.subscribe("Leo/Fecha");     // Aca realiza la suscripcion
 
     // Espera para que conecte denuevo
     delay(3000);
