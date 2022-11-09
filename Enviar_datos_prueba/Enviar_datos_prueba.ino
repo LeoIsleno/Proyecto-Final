@@ -100,7 +100,19 @@ void recived(String topic, String valor) {
 
   flagStateTomates = 0;
 
-  if (topic == "Tomates/Fecha") {
+  if (topic == "Tomates/Fecha1") {
+    eleccion = 1;
+    Serial.print("Codigo recibido: ");
+    Serial.println(eleccion);
+    Serial.println("  ");
+
+    Serial.print("Fecha de cultivo elegido:");
+    Serial.println(valor);
+    Serial.println("  ");
+
+    seleccion_cultivo(eleccion, valor);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+  if (topic == "Tomates/Fecha2") {
     eleccion = 1;
     Serial.print("Codigo recibido: ");
     Serial.println(eleccion);
@@ -126,12 +138,12 @@ void seleccion_cultivo(int eleccion, String Fecha) {
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
       Serial.print("Fecha de cosecha: ");
       Serial.println(fechaCosechada);
-      
+
       char a[1];
       fechaCosechada.toCharArray(a, 12);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
       Serial.print("Dato enviado: ");
       Serial.println(a);
-      MQTT_CLIENT.publish("Fecha/cosecha", a);  //Envia la informacion dentro del arreglo char
+      MQTT_CLIENT.publish("Fecha/cosecha1", a);  //Envia la informacion dentro del arreglo char
       delay(500);
       break;
   }
@@ -173,10 +185,15 @@ void reconnect() {
   while (!MQTT_CLIENT.connected()) {
     Serial.println("Trying to connect with Broker MQTT.");
     MQTT_CLIENT.connect("LeoIsleno");
-    MQTT_CLIENT.subscribe("Tomates/Fecha");  // Aca realiza la suscripcion
-    MQTT_CLIENT.subscribe("Leo/Cebollas");   // Aca realiza la suscripcion
-                                             // MQTT_CLIENT.subscribe("Leo/Fecha");     // Aca realiza la suscripcion
 
+    //    Sector 1
+    MQTT_CLIENT.subscribe("Tomates/Fecha1");   // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Cebollas/Fecha1");  // Aca realiza la suscripcion
+
+    //    Sector 2
+    MQTT_CLIENT.subscribe("Tomates/Fecha2");   // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Cebollas/Fecha2");  // Aca realiza la suscripcion
+    
     // Espera para que conecte denuevo
     delay(3000);
   }
