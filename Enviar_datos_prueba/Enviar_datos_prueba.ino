@@ -17,6 +17,7 @@ const int fotoresistencia = 39;
 const int sensorSuelo3 = 35;
 const int sensorSuelo2 = 34;
 const int sensorSuelo1 = 32;
+
 const int sensorTemp = 33;
 //const int relay = 19;
 
@@ -31,7 +32,6 @@ void setup() {
 
   /*Iniciamos el terminal Serial a una velocidad de 115200, junto a un retardo de 1 segundo y definimos los pines a utilizar*/
 
-
   pinMode(fotoresistencia, INPUT);  // Configurar relay como salida o OUTPUT
 
   Serial.begin(115200);  //Inicializa el serial begin a 115200
@@ -43,6 +43,7 @@ void setup() {
 
   WiFi.begin(ssid, password);  //Inicializa el modulo WIFI
   Serial.print("Conectando");
+  
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -56,7 +57,7 @@ void setup() {
   MQTT_CLIENT.setCallback(callback);
 }
 
-// Funcion a seguir cuando recive la informacion
+// Funcion a seguir cuando recibe la informacion
 void callback(char* recibido, byte* payload, unsigned int length) {
   int receivedInt;
   String var;
@@ -76,17 +77,18 @@ void callback(char* recibido, byte* payload, unsigned int length) {
   Serial.println(var);
   Serial.println("  ");
 
-  if(recibidoStr == "Activacion/Sector1"){
-    if(var == "True"){
+  if (recibidoStr == "Leo/Sector1") {
+    if (var == "1") {
       StateSector = 1;  //Cambia el estado de Seccion - Activa el sector 1
-    }
-    else{
-       StateSector = 1;  //Cambia el estado de Seccion - Desactiva el sector 1
+    } else {
+      StateSector = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
     }
   }
 
   recived(recibidoStr, var);  //Topic - Valor recibido
 }
+
+//Main
 void loop() {
   if (!MQTT_CLIENT.connected()) {
     reconnect();
@@ -95,6 +97,7 @@ void loop() {
   MQTT_CLIENT.loop();  // Testea la suscripcion
 }
 
+//Segun lo recibido desde la App segun el topic y mensaje recibido actua
 void recived(String topic, String valor) {
   int flagStateTomates;
   int eleccion = 0;
@@ -127,6 +130,8 @@ void recived(String topic, String valor) {
   }
 }
 
+
+//Envia la fecha de cosecha segun el cultivo elegido
 void seleccion_cultivo(int eleccion, String Fecha) {
   int cantMes;
   String fechaCosechada;
@@ -150,6 +155,7 @@ void seleccion_cultivo(int eleccion, String Fecha) {
   }
 }
 
+//Separa y divide la fecha para sumarle la cantidad de dias corrrespondientes para su cosecha - Retorna el la fecha de cosecha
 String fecha_cosecha(String Fecha, int cantMes) {
   int dia, mes, anio;
   String var;
@@ -176,6 +182,7 @@ String fecha_cosecha(String Fecha, int cantMes) {
   return dato;
 }
 
+//Segun el flag activada se activan diferentes sensores a su correspondiente sector
 void menu_sector(int dato) {
   float lectura_fotoresistencia, lectura_sensorTemp;
   int lectura_sensorSuelo1, lectura_sensorSuelo2, lectura_sensorSuelo3;
@@ -195,23 +202,24 @@ void menu_sector(int dato) {
       topic_Sensor2 = "Inf/SensoHumedad1";
       topic_Sensor3 = "Inf/CantLuz";
 
-      enviar_datoSensor_MQTT(lectura_fotoresistencia, lectura_sensorTemp, lectura_sensorSuelo1, topic_Sensor1, topic_Sensor2, topic_Sensor3);
+      enviar_datoSensor_MQTT(lectura_sensorTemp, lectura_fotoresistencia, lectura_sensorSuelo1, topic_Sensor1, topic_Sensor2, topic_Sensor3);
       break;
   }
 }
 
-void enviar_datoSensor_MQTT(float lecturaLuz, float lecturaTemp, int lecturaSuelo, char* topic_Sensor1, char* topic_Sensor2, char* topic_Sensor3) {
-  unsigned long lastMillis_publish_1 = 0; //Variable a guardar el tiempo de millis
-  unsigned long lastMillis_publish_2 = 0; //Variable a guardar el tiempo de millis
-  unsigned long lastMillis_publish_3 = 0; //Variable a guardar el tiempo de millis
+//Envio de datos por MQTT a App Inventor
+void enviar_datoSensor_MQTT(float lecturaTemp, float lecturaLuz, int lecturaSuelo, char* topic_Sensor1, char* topic_Sensor2, char* topic_Sensor3) {
+  unsigned long lastMillis_publish_1 = 0;  //Variable a guardar el tiempo de millis
+  unsigned long lastMillis_publish_2 = 0;  //Variable a guardar el tiempo de millis
+  unsigned long lastMillis_publish_3 = 0;  //Variable a guardar el tiempo de millis
 
   if (millis() - lastMillis_publish_1 >= 5000) {
     lastMillis_publish_1 = millis();
     String dato1 = String(lecturaTemp);  //Se convierte el tipo de variable de int a String
     char a[1];
     dato1.toCharArray(a, 5);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
-    Serial.print("Valores de Temperatura: ");
-    Serial.println(a);
+    //Serial.print("Valores de Temperatura: ");
+    //Serial.println(a);
     MQTT_CLIENT.publish(topic_Sensor1, a);  //Envia la informacion dentro del arreglo char
   }
   if (millis() - lastMillis_publish_2 >= 5500) {
@@ -219,8 +227,8 @@ void enviar_datoSensor_MQTT(float lecturaLuz, float lecturaTemp, int lecturaSuel
     String dato2 = String(lecturaSuelo);  //Se convierte el tipo de variable de int a String
     char b[1];
     dato2.toCharArray(b, 12);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
-    Serial.print("Valores de Humedad: ");
-    Serial.println(b);
+    //Serial.print("Valores de Humedad: ");
+    //Serial.println(b);
     MQTT_CLIENT.publish(topic_Sensor2, b);  //Envia la informacion dentro del arreglo char
   }
   if (millis() - lastMillis_publish_3 >= 6000) {
@@ -228,8 +236,8 @@ void enviar_datoSensor_MQTT(float lecturaLuz, float lecturaTemp, int lecturaSuel
     String dato3 = String(lecturaLuz);  //Se convierte el tipo de variable de int a String
     char c[1];
     dato3.toCharArray(c, 12);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
-    Serial.print("Valores de Luz: ");
-    Serial.println(c);
+    //Serial.print("Valores de Luz: ");
+    //Serial.println(c);
     MQTT_CLIENT.publish(topic_Sensor3, c);  //Envia la informacion dentro del arreglo char
   }
 }
@@ -243,6 +251,8 @@ void reconnect() {
   while (!MQTT_CLIENT.connected()) {
     Serial.println("Intentando conectar con Broker MQTT.");
     MQTT_CLIENT.connect("LeoIsleno");
+
+    MQTT_CLIENT.subscribe("Leo/Sector1");   // Aca realiza la suscripcion
 
     //    Sector 1
     MQTT_CLIENT.subscribe("Tomates/Fecha1");   // Aca realiza la suscripcion
