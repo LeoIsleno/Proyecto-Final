@@ -1,6 +1,7 @@
 /*
- * 11/11/22 
- * Sector 1 funcionando con sensores, se implemento el uso de la funcion Millis asi evitamos que el programa se detenga con los delays y realizar multitareas
+ * 16/11/22 
+ * Los 3 sectores funcionan correctamente segun el tipo de Verdura a cultivar, calculando la fecha de cosecha y enviandola para App Inventor.
+ * Correcto funcionamiento al corroborar la fecha del dia de hoy conrespecto al de cultivo, el programa se detiene y obliga al usuario cosechar nuevamente (Unicamente en el Sector 1 - Incompleto)
 */
 
 #include <WiFi.h>          // Para el ESP32
