@@ -11,7 +11,7 @@ WiFiClient WIFI_CLIENT;    //Libreria Wifi
 PubSubClient MQTT_CLIENT;
 
 const char* ssid = "Leouu";          //Nombre del Wifi
-const char* password = "leo12345C";  //Contraseña del wifi
+const char* password = "leo12345S";  //Contraseña del wifi
 
 const int fotoresistencia = 39;
 const int sensorSuelo3 = 35;
@@ -21,7 +21,8 @@ const int sensorSuelo1 = 32;
 const int sensorTemp = 33;
 //const int relay = 19;
 
-int StateSector = 0;
+bool StateSector = 0, flagFechaComprobar = 0, flagActivarCFC1 = 0, flagActivarCFC2 = 0, flagActivarCFC3 = 0;
+String fechaHoy, fechaCultivo1, fechaCultivo2;
 
 void recived(String topic, String valor);
 
@@ -43,7 +44,7 @@ void setup() {
 
   WiFi.begin(ssid, password);  //Inicializa el modulo WIFI
   Serial.print("Conectando");
-  
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -77,14 +78,6 @@ void callback(char* recibido, byte* payload, unsigned int length) {
   Serial.println(var);
   Serial.println("  ");
 
-  if (recibidoStr == "Leo/Sector1") {
-    if (var == "1") {
-      StateSector = 1;  //Cambia el estado de Seccion - Activa el sector 1
-    } else {
-      StateSector = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
-    }
-  }
-
   recived(recibidoStr, var);  //Topic - Valor recibido
 }
 
@@ -101,21 +94,52 @@ void loop() {
 void recived(String topic, String valor) {
   int flagStateTomates;
   int eleccion = 0;
+  char* enviarTopic1 = "Fecha/cosecha1";
+  char* enviarTopic2 = "Fecha/cosecha2";
+  char* enviarTopic3 = "Fecha/cosecha3";
+
+  if (topic == "Leo/Sector1") {
+    if (valor == "1") {
+      StateSector = 1;  //Cambia el estado de Seccion - Activa el sector 1
+    } else {
+      StateSector = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
+    }
+  }
+
+  if (topic == "Comprobar/FechaHoy") {
+    fechaHoy = valor;
+    //Serial.print("Fecha de Hoy: ");
+    //Serial.println(fechaHoy);
+    flagActivarCFC1 = 1;
+  }
+
+  if (topic == "Comprobar/Cultivo1") {
+    fechaCultivo1 = valor;
+    //Serial.print("Valor 1: ");
+    //Serial.println(fechaCultivo1);
+    flagActivarCFC2 = 1;
+  }
+
+  if (topic == "Comprobar/Cultivo2") {
+    fechaCultivo2 = valor;
+    //Serial.print("Valor 2: ");
+    //Serial.println(fechaCultivo2);
+    flagActivarCFC3 = 1;
+  }
+
+  if (flagActivarCFC1 && flagActivarCFC2 && flagActivarCFC3) {
+    comprobarFechasCosechas(fechaHoy, fechaCultivo1, fechaCultivo2);
+  }
 
   if (topic == "Tomates/Fecha1") {
     eleccion = 1;
-    Serial.print("Codigo recibido: ");
-    Serial.println(eleccion);
-    Serial.println("  ");
-
-    Serial.print("Fecha de cultivo elegido:");
-    Serial.println(valor);
-    Serial.println("  ");
-
-    seleccion_cultivo(eleccion, valor);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
+
   if (topic == "Tomates/Fecha2") {
     eleccion = 1;
+
+    /*
     Serial.print("Codigo recibido: ");
     Serial.println(eleccion);
     Serial.println("  ");
@@ -123,16 +147,149 @@ void recived(String topic, String valor) {
     Serial.print("Fecha de cultivo elegido:");
     Serial.println(valor);
     Serial.println("  ");
+    */
+    seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
 
-    seleccion_cultivo(eleccion, valor);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  if (topic == "Tomates/Fecha3") {
+    eleccion = 1;
+    /*
+    Serial.print("Codigo recibido: ");
+    Serial.println(eleccion);
+    Serial.println("  ");
 
-    //menu_sector(2);
+    Serial.print("Fecha de cultivo elegido:");
+    Serial.println(valor);
+    Serial.println("  ");
+    */
+    seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Cebollas/Fecha1") {
+    eleccion = 2;
+    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Cebollas/Fecha2") {
+    eleccion = 2;
+    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Cebollas/Fecha3") {
+    eleccion = 2;
+    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Lechuga/Fecha1") {
+    eleccion = 3;
+    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Lechuga/Fecha2") {
+    eleccion = 3;
+    seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Lechuga/Fecha3") {
+    eleccion = 3;
+    seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Zanahoria/Fecha1") {
+    eleccion = 4;
+    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Zanahoria/Fecha2") {
+    eleccion = 4;
+    seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Zanahoria/Fecha3") {
+    eleccion = 4;
+    seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Pimiento/Fecha1") {
+    eleccion = 5;
+    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Pimiento/Fecha2") {
+    eleccion = 5;
+    seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+  }
+
+  if (topic == "Pimiento/Fecha3") {
+    eleccion = 5;
+    seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 }
 
+void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fechaCultivo2) {
+  bool flag = 0;
+
+  //fechaCultivo1 = concatenarfecha(fechaCultivo1);
+  fechaCultivo1 = concatenarfecha(fechaCultivo1);
+  fechaCultivo2 = concatenarfecha(fechaCultivo2);
+  fechaHoy = concatenarfecha(fechaHoy);
+  flag = 1;
+
+  /*
+  if (flag == 1) {
+    Serial.print("dato1: ");
+    Serial.println(fechaCultivo1);
+    Serial.print("dato2: ");
+    Serial.println(fechaCultivo2);
+    Serial.print("Fecha Hoy: ");
+    Serial.println(fechaHoy);
+  }
+  */
+
+  if (fechaCultivo1 == fechaHoy) {
+    Serial.println("Alerta de Cosecha al sector 1");
+    alertaCosecha(1);
+  }
+
+  if (fechaCultivo2 == fechaHoy) {
+    alertaCosecha(2);
+  }
+}
+
+void alertaCosecha(int i) {
+  switch (i) {
+    case 1:
+      int cosechaSector1 = 1;
+      String dato1 = String(cosechaSector1);
+      char a[5];
+      dato1.toCharArray(a, 5);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
+      Serial.println(a);
+      MQTT_CLIENT.publish("alerta/Sector1", a);  //Envia la informacion dentro del arreglo char
+      break;
+  }
+}
+
+String concatenarfecha(String Fecha) {
+  int dia, mes, anio;
+  String var;
+  String dato;
+
+  var = Fecha.substring(0, 4);
+  dia = var.toInt();
+  var = Fecha.substring(4, 8);
+  mes = var.toInt();
+  var = Fecha.substring(8, 12);
+  anio = var.toInt();
+
+  dato.concat(dia);
+  dato.concat(mes);
+  dato.concat(anio);
+
+  return dato;
+}
 
 //Envia la fecha de cosecha segun el cultivo elegido
-void seleccion_cultivo(int eleccion, String Fecha) {
+void seleccion_cultivo(int eleccion, String Fecha, char* topic) {
   int cantMes;
   String fechaCosechada;
 
@@ -144,15 +301,57 @@ void seleccion_cultivo(int eleccion, String Fecha) {
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
       Serial.print("Fecha de cosecha: ");
       Serial.println(fechaCosechada);
+      enviarDatosCosecha(fechaCosechada, topic);
+      break;
+    case 2:         //Eleccion de Cebollas
+      cantMes = 4;  //Se cosecha luego de los 4 meses
+      Serial.println("Comenzando el calculo de la cosecha de Tomates...");
+      Serial.println("  ");
+      fechaCosechada = fecha_cosecha(Fecha, cantMes);
+      Serial.print("Fecha de cosecha: ");
+      Serial.println(fechaCosechada);
+      enviarDatosCosecha(fechaCosechada, topic);
+      break;
 
-      char a[1];
-      fechaCosechada.toCharArray(a, 12);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
-      Serial.print("Dato enviado: ");
-      Serial.println(a);
-      MQTT_CLIENT.publish("Fecha/cosecha1", a);  //Envia la informacion dentro del arreglo char
-      delay(500);
+    case 3:         //Eleccion de Lechuga
+      cantMes = 3;  //Se cosecha luego de los 3 meses
+      Serial.println("Comenzando el calculo de la cosecha de Tomates...");
+      Serial.println("  ");
+      fechaCosechada = fecha_cosecha(Fecha, cantMes);
+      Serial.print("Fecha de cosecha: ");
+      Serial.println(fechaCosechada);
+      enviarDatosCosecha(fechaCosechada, topic);
+      break;
+
+    case 4:         //Eleccion de Zanahoria
+      cantMes = 3;  //Se cosecha luego de los 3 meses
+      Serial.println("Comenzando el calculo de la cosecha de Tomates...");
+      Serial.println("  ");
+      fechaCosechada = fecha_cosecha(Fecha, cantMes);
+      Serial.print("Fecha de cosecha: ");
+      Serial.println(fechaCosechada);
+      enviarDatosCosecha(fechaCosechada, topic);
+      break;
+
+    case 5:         //Eleccion de Pimiento
+      cantMes = 5;  //Se cosecha luego de los 5 meses
+      Serial.println("Comenzando el calculo de la cosecha de Tomates...");
+      Serial.println("  ");
+      fechaCosechada = fecha_cosecha(Fecha, cantMes);
+      Serial.print("Fecha de cosecha: ");
+      Serial.println(fechaCosechada);
+      enviarDatosCosecha(fechaCosechada, topic);
       break;
   }
+}
+
+void enviarDatosCosecha(String fechaCosecha, char *topic) {
+  char a[12];
+  fechaCosecha.toCharArray(a, 12);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
+  Serial.print("Dato enviado: ");
+  Serial.println(a);
+  MQTT_CLIENT.publish(topic, a);  //Envia la informacion dentro del arreglo char
+  delay(500);
 }
 
 //Separa y divide la fecha para sumarle la cantidad de dias corrrespondientes para su cosecha - Retorna el la fecha de cosecha
@@ -161,11 +360,11 @@ String fecha_cosecha(String Fecha, int cantMes) {
   String var;
   String dato;
 
-  var = Fecha.substring(0, 3);
+  var = Fecha.substring(0, 4);
   dia = var.toInt();
-  var = Fecha.substring(3, 6);
+  var = Fecha.substring(4, 8);
   mes = var.toInt();
-  var = Fecha.substring(6, 9);
+  var = Fecha.substring(8, 12);
   anio = var.toInt();
 
   if (mes < 12) {
@@ -209,20 +408,20 @@ void menu_sector(int dato) {
 
 //Envio de datos por MQTT a App Inventor
 void enviar_datoSensor_MQTT(float lecturaTemp, float lecturaLuz, int lecturaSuelo, char* topic_Sensor1, char* topic_Sensor2, char* topic_Sensor3) {
-  unsigned long lastMillis_publish_1 = 0;  //Variable a guardar el tiempo de millis
-  unsigned long lastMillis_publish_2 = 0;  //Variable a guardar el tiempo de millis
-  unsigned long lastMillis_publish_3 = 0;  //Variable a guardar el tiempo de millis
+  static unsigned long lastMillis_publish_1 = millis();  //Variable a guardar el tiempo de millis
+  static unsigned long lastMillis_publish_2 = millis();  //Variable a guardar el tiempo de millis
+  static unsigned long lastMillis_publish_3 = millis();  //Variable a guardar el tiempo de millis
 
-  if (millis() - lastMillis_publish_1 >= 5000) {
+  if (millis() - lastMillis_publish_1 >= 2000) {
     lastMillis_publish_1 = millis();
     String dato1 = String(lecturaTemp);  //Se convierte el tipo de variable de int a String
-    char a[1];
+    char a[5];
     dato1.toCharArray(a, 5);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
     //Serial.print("Valores de Temperatura: ");
     //Serial.println(a);
     MQTT_CLIENT.publish(topic_Sensor1, a);  //Envia la informacion dentro del arreglo char
   }
-  if (millis() - lastMillis_publish_2 >= 5500) {
+  if (millis() - lastMillis_publish_2 >= 2500) {
     lastMillis_publish_2 = millis();
     String dato2 = String(lecturaSuelo);  //Se convierte el tipo de variable de int a String
     char b[1];
@@ -231,7 +430,7 @@ void enviar_datoSensor_MQTT(float lecturaTemp, float lecturaLuz, int lecturaSuel
     //Serial.println(b);
     MQTT_CLIENT.publish(topic_Sensor2, b);  //Envia la informacion dentro del arreglo char
   }
-  if (millis() - lastMillis_publish_3 >= 6000) {
+  if (millis() - lastMillis_publish_3 >= 3000) {
     lastMillis_publish_3 = millis();
     String dato3 = String(lecturaLuz);  //Se convierte el tipo de variable de int a String
     char c[1];
@@ -252,17 +451,36 @@ void reconnect() {
     Serial.println("Intentando conectar con Broker MQTT.");
     MQTT_CLIENT.connect("LeoIsleno");
 
-    MQTT_CLIENT.subscribe("Leo/Sector1");   // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("State/Sector1");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("State/Sector2");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("State/Sector3");  // Aca realiza la suscripcion
 
     //    Sector 1
-    MQTT_CLIENT.subscribe("Tomates/Fecha1");   // Aca realiza la suscripcion
-    MQTT_CLIENT.subscribe("Cebollas/Fecha1");  // Aca realiza la suscripcion
-    MQTT_CLIENT.subscribe("Lechuga/Fecha1");   // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Tomates/Fecha1");    // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Cebollas/Fecha1");   // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Lechuga/Fecha1");    // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Zanahoria/Fecha1");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Pimiento/Fecha1");   // Aca realiza la suscripcion
 
     //    Sector 2
-    MQTT_CLIENT.subscribe("Tomates/Fecha2");   // Aca realiza la suscripcion
-    MQTT_CLIENT.subscribe("Cebollas/Fecha2");  // Aca realiza la suscripcion
-    MQTT_CLIENT.subscribe("Lechuga/Fecha2");   // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Tomates/Fecha2");    // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Cebollas/Fecha2");   // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Lechuga/Fecha2");    // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Zanahoria/Fecha2");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Pimiento/Fecha2");   // Aca realiza la suscripcion
+
+    //    Sector 3
+    MQTT_CLIENT.subscribe("Tomates/Fecha3");    // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Cebollas/Fecha3");   // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Lechuga/Fecha3");    // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Zanahoria/Fecha3");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Pimiento/Fecha3");   // Aca realiza la suscripcion
+
+
+    MQTT_CLIENT.subscribe("Comprobar/FechaHoy");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Comprobar/Cultivo1");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Comprobar/Cultivo2");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Comprobar/Cultivo3");  // Aca realiza la suscripcion
 
     // Espera para que conecte denuevo
     delay(3000);
