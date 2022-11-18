@@ -22,8 +22,8 @@ const int sensorSuelo1 = 32;
 const int sensorTemp = 33;
 //const int relay = 19;
 
-bool StateSector = 0, flagFechaComprobar = 0, flagActivarCFC1 = 0, flagActivarCFC2 = 0, flagActivarCFC3 = 0;
-String fechaHoy, fechaCultivo1, fechaCultivo2;
+bool StateSector = 0, flagFechaComprobar = 0, flagActivarCFC1 = 0, flagActivarCFC2 = 0, flagActivarCFC3 = 0, flagActivarCFC = 0, flagGlobalActivarAlerta = 0;
+String fechaHoy = "a", fechaCultivo1 = "b", fechaCultivo2 = "c", fechaCultivo3 = "d";
 
 void recived(String topic, String valor);
 
@@ -99,7 +99,8 @@ void recived(String topic, String valor) {
   char* enviarTopic2 = "Fecha/cosecha2";
   char* enviarTopic3 = "Fecha/cosecha3";
 
-  if (topic == "Leo/Sector1") {
+
+  if (topic == "State/Sector1") {
     if (valor == "1") {
       StateSector = 1;  //Cambia el estado de Seccion - Activa el sector 1
     } else {
@@ -107,29 +108,50 @@ void recived(String topic, String valor) {
     }
   }
 
+  if (topic == "State/Sector2") {
+    if (valor == "1") {
+      StateSector = 2;  //Cambia el estado de Seccion - Activa el sector 1
+    } else {
+      StateSector = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
+    }
+  }
+
+  if (topic == "State/Sector3") {
+    if (valor == "1") {
+      StateSector = 3;  //Cambia el estado de Seccion - Activa el sector 1
+    } else {
+      StateSector = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
+    }
+  }
+
   if (topic == "Comprobar/FechaHoy") {
     fechaHoy = valor;
-    //Serial.print("Fecha de Hoy: ");
-    //Serial.println(fechaHoy);
-    flagActivarCFC1 = 1;
+    flagActivarCFC = 1;
   }
 
   if (topic == "Comprobar/Cultivo1") {
     fechaCultivo1 = valor;
-    //Serial.print("Valor 1: ");
-    //Serial.println(fechaCultivo1);
-    flagActivarCFC2 = 1;
+    flagActivarCFC1 = 1;
   }
 
   if (topic == "Comprobar/Cultivo2") {
     fechaCultivo2 = valor;
-    //Serial.print("Valor 2: ");
-    //Serial.println(fechaCultivo2);
+    flagActivarCFC2 = 1;
+  }
+
+  if (topic == "Comprobar/Cultivo3") {
+    fechaCultivo3 = valor;
     flagActivarCFC3 = 1;
   }
 
   if (flagActivarCFC1 && flagActivarCFC2 && flagActivarCFC3) {
-    comprobarFechasCosechas(fechaHoy, fechaCultivo1, fechaCultivo2);
+
+    flagActivarCFC = 0;
+    flagActivarCFC1 = 0;
+    flagActivarCFC2 = 0;
+    flagActivarCFC3 = 0;
+
+    comprobarFechasCosechas(fechaHoy, fechaCultivo1, fechaCultivo2, fechaCultivo3);
   }
 
   if (topic == "Tomates/Fecha1") {
@@ -227,47 +249,67 @@ void recived(String topic, String valor) {
   }
 }
 
-void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fechaCultivo2) {
-  bool flag = 0;
+void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fechaCultivo2, String fechaCultivo3) {
+  char* topicAlertaSector1 = "alerta/Sector1";
+  char* topicAlertaSector2 = "alerta/Sector2";
+  char* topicAlertaSector3 = "alerta/Sector3";
 
   //fechaCultivo1 = concatenarfecha(fechaCultivo1);
-  fechaCultivo1 = concatenarfecha(fechaCultivo1);
+  fechaCultivo1 = concatenarfecha(fechaHoy);
   fechaCultivo2 = concatenarfecha(fechaCultivo2);
+  fechaCultivo3 = concatenarfecha(fechaCultivo3);
   fechaHoy = concatenarfecha(fechaHoy);
-  flag = 1;
-
-  /*
-  if (flag == 1) {
-    Serial.print("dato1: ");
-    Serial.println(fechaCultivo1);
-    Serial.print("dato2: ");
-    Serial.println(fechaCultivo2);
-    Serial.print("Fecha Hoy: ");
-    Serial.println(fechaHoy);
-  }
-  */
+  Serial.println(fechaCultivo1);
+  Serial.println(fechaHoy);
 
   if (fechaCultivo1 == fechaHoy) {
     Serial.println("Alerta de Cosecha al sector 1");
-    alertaCosecha(1);
-  }
+    alertaCosecha(1, topicAlertaSector1);
+    flagGlobalActivarAlerta = 1;
+  } else if (fechaCultivo2 == fechaHoy) {
+    alertaCosecha(2, topicAlertaSector2);
+    flagGlobalActivarAlerta = 1;
+  } else if (fechaCultivo3 == fechaHoy) {
+    alertaCosecha(3, topicAlertaSector3);
+    flagGlobalActivarAlerta = 1;
+  } /* else {
+    fechaCultivo1 = "a";
+    fechaCultivo2 = "b";
+    fechaCultivo3 = "c";
+    flagGlobalActivarAlerta = 0;
+  }*/
+}
 
-  if (fechaCultivo2 == fechaHoy) {
-    alertaCosecha(2);
+void alertaCosecha(int i, char* topic) {
+  if (flagGlobalActivarAlerta == 1) {
+    switch (i) {
+      case 1:
+        enviarAlertas(1, topic);
+        flagGlobalActivarAlerta = 0;
+        break;
+      case 2:
+        enviarAlertas(1, topic);
+        flagGlobalActivarAlerta = 0;
+        break;
+      case 3:
+        enviarAlertas(1, topic);
+        flagGlobalActivarAlerta = 0;
+        break;
+    }
   }
 }
 
-void alertaCosecha(int i) {
-  switch (i) {
-    case 1:
-      int cosechaSector1 = 1;
-      String dato1 = String(cosechaSector1);
-      char a[5];
-      dato1.toCharArray(a, 5);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
-      Serial.println(a);
-      MQTT_CLIENT.publish("alerta/Sector1", a);  //Envia la informacion dentro del arreglo char
-      break;
-  }
+void enviarAlertas(int dato, char* topic) {
+  String dato1 = String(dato);
+  char a[5];
+  dato1.toCharArray(a, 5);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
+  Serial.println(a);
+  MQTT_CLIENT.publish(topic, a);  //Envia la informacion dentro del arreglo char
+
+  fechaCultivo1 = "a";
+  fechaCultivo2 = "b";
+  fechaCultivo3 = "c";
+  flagGlobalActivarAlerta = 0;
 }
 
 String concatenarfecha(String Fecha) {
@@ -346,7 +388,7 @@ void seleccion_cultivo(int eleccion, String Fecha, char* topic) {
   }
 }
 
-void enviarDatosCosecha(String fechaCosecha, char *topic) {
+void enviarDatosCosecha(String fechaCosecha, char* topic) {
   char a[12];
   fechaCosecha.toCharArray(a, 12);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
   Serial.print("Dato enviado: ");
