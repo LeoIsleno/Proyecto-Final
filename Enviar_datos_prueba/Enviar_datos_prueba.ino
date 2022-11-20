@@ -255,11 +255,11 @@ void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fecha
   char* topicAlertaSector3 = "alerta/Sector3";
 
   //fechaCultivo1 = concatenarfecha(fechaCultivo1);
-  fechaCultivo1 = concatenarfecha(fechaHoy);
+  fechaCultivo1 = concatenarfecha(fechaCultivo1);
   fechaCultivo2 = concatenarfecha(fechaCultivo2);
-  fechaCultivo3 = concatenarfecha(fechaCultivo3);
+  fechaCultivo3 = concatenarfecha(fechaHoy);
   fechaHoy = concatenarfecha(fechaHoy);
-  Serial.println(fechaCultivo1);
+  Serial.println(fechaCultivo3);
   Serial.println(fechaHoy);
 
   if (fechaCultivo1 == fechaHoy) {
