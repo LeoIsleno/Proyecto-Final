@@ -5,3 +5,7 @@ Publish:
 https://forum.arduino.cc/t/initializer-string-for-array-of-chars-is-too-long-fpermissive/486437
 http://www.steves-internet-guide.com/using-arduino-pubsub-mqtt-client/
 https://www.youtube.com/watch?v=zmcjHS5624k
+
+EEMPROM:
+https://docs.arduino.cc/learn/built-in-libraries/eeprom#example
+https://www.youtube.com/watch?v=quUf47CAhcs
