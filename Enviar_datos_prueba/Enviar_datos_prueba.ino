@@ -1,15 +1,17 @@
 /*
- * 16/11/22 
- * Los 3 sectores funcionan correctamente segun el tipo de Verdura a cultivar, calculando la fecha de cosecha y enviandola para App Inventor.
- * Correcto funcionamiento al corroborar la fecha del dia de hoy conrespecto al de cultivo, el programa se detiene y obliga al usuario cosechar nuevamente (Unicamente en el Sector 1 - Incompleto)
+ * 20/11/22 
+ * Funcionalidad de los 3 sectores correcta en el momento de cosecha.
+ * Proximamente se utilizara EEPROM para gestionar e ltiempo de accionamiento de los reles.
 */
 
-#include <WiFi.h>          // Para el ESP32
-WiFiClient WIFI_CLIENT;    //Libreria Wifi
+#include <WiFi.h>  // Para el ESP32
+#include <EEPROM.h>
 #include <PubSubClient.h>  //Libreria para metodo MQTT
-#include <TimeLib.h>       //Libreria del Reloj
 #include <MQTT.h>
+WiFiClient WIFI_CLIENT;    //Libreria Wifi
 PubSubClient MQTT_CLIENT;
+
+#define EEPROM_SIZE 64
 
 const char* ssid = "Leouu";          //Nombre del Wifi
 const char* password = "leo12345S";  //Contraseña del wifi
@@ -22,27 +24,28 @@ const int sensorSuelo1 = 32;
 const int sensorTemp = 33;
 //const int relay = 19;
 
-bool StateSector = 0, flagFechaComprobar = 0, flagActivarCFC1 = 0, flagActivarCFC2 = 0, flagActivarCFC3 = 0, flagActivarCFC = 0, flagGlobalActivarAlerta = 0;
+bool StateSectorActivate = 0, flagFechaComprobar = 0, flagActivarCFC1 = 0, flagActivarCFC2 = 0, flagActivarCFC3 = 0, flagActivarCFC = 0, flagGlobalActivarAlerta = 0, flagStateSector1 = 0, flagStateSector2 = 0, flagStateSector3 = 0;
 String fechaHoy = "a", fechaCultivo1 = "b", fechaCultivo2 = "c", fechaCultivo3 = "d";
+
+bool estado = 0;
 
 void recived(String topic, String valor);
 
 void setup() {
-
-  //Configuracion del reloj
-  setTime(0, 0, 0, 29, 3, 22);  //hr,mm,ss,d,m,y
-
   /*Iniciamos el terminal Serial a una velocidad de 115200, junto a un retardo de 1 segundo y definimos los pines a utilizar*/
-
-  pinMode(fotoresistencia, INPUT);  // Configurar relay como salida o OUTPUT
-
   Serial.begin(115200);  //Inicializa el serial begin a 115200
-  delay(1000);           // 1 segundo
+
+  EEPROM.begin(EEPROM_SIZE);
+  //EEPROM.write(0,0);
+  estado = EEPROM.read(0);
+  Serial.print("Valor de EEPROM inicial: ");
+  Serial.println(estado); 
+
+  delay(1000);  // 1 segundo
   Serial.println("Sensores Instalados y listos");
   Serial.println();
   Serial.print("Conectando con ");
   Serial.println(ssid);
-
   WiFi.begin(ssid, password);  //Inicializa el modulo WIFI
   Serial.print("Conectando");
 
@@ -87,8 +90,22 @@ void loop() {
   if (!MQTT_CLIENT.connected()) {
     reconnect();
   }
-  menu_sector(StateSector);
-  MQTT_CLIENT.loop();  // Testea la suscripcion
+  //menu_sector(StateSectorActivate);
+  //MQTT_CLIENT.loop();  // Testea la suscripcion
+  delay(5000);
+  estado = 0;
+  EEPROM.put(0,estado);
+  EEPROM.commit();
+  Serial.print("Valor de EEPROM en loop ");
+  Serial.println(estado); 
+  delay(5000);
+
+  estado = 1;
+  EEPROM.put(0,estado);
+  EEPROM.commit();
+  Serial.print("Valor de EEPROM en loop ");
+  Serial.println(estado); 
+  delay(5000);
 }
 
 //Segun lo recibido desde la App segun el topic y mensaje recibido actua
@@ -102,25 +119,25 @@ void recived(String topic, String valor) {
 
   if (topic == "State/Sector1") {
     if (valor == "1") {
-      StateSector = 1;  //Cambia el estado de Seccion - Activa el sector 1
+      StateSectorActivate = 1;  //Cambia el estado de Seccion - Activa el sector 1
     } else {
-      StateSector = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
+      StateSectorActivate = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
     }
   }
 
   if (topic == "State/Sector2") {
     if (valor == "1") {
-      StateSector = 2;  //Cambia el estado de Seccion - Activa el sector 1
+      StateSectorActivate = 2;  //Cambia el estado de Seccion - Activa el sector 1
     } else {
-      StateSector = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
+      StateSectorActivate = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
     }
   }
 
   if (topic == "State/Sector3") {
     if (valor == "1") {
-      StateSector = 3;  //Cambia el estado de Seccion - Activa el sector 1
+      StateSectorActivate = 3;  //Cambia el estado de Seccion - Activa el sector 1
     } else {
-      StateSector = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
+      StateSectorActivate = 0;  //Cambia el estado de Seccion - Desactiva el sector 1
     }
   }
 
@@ -257,7 +274,7 @@ void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fecha
   //fechaCultivo1 = concatenarfecha(fechaCultivo1);
   fechaCultivo1 = concatenarfecha(fechaCultivo1);
   fechaCultivo2 = concatenarfecha(fechaCultivo2);
-  fechaCultivo3 = concatenarfecha(fechaHoy);
+  fechaCultivo3 = concatenarfecha(fechaCultivo3);
   fechaHoy = concatenarfecha(fechaHoy);
   Serial.println(fechaCultivo3);
   Serial.println(fechaHoy);
@@ -267,9 +284,11 @@ void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fecha
     alertaCosecha(1, topicAlertaSector1);
     flagGlobalActivarAlerta = 1;
   } else if (fechaCultivo2 == fechaHoy) {
+    Serial.println("Alerta de Cosecha al sector 2");
     alertaCosecha(2, topicAlertaSector2);
     flagGlobalActivarAlerta = 1;
   } else if (fechaCultivo3 == fechaHoy) {
+    Serial.println("Alerta de Cosecha al sector 3");
     alertaCosecha(3, topicAlertaSector3);
     flagGlobalActivarAlerta = 1;
   } /* else {
@@ -435,7 +454,8 @@ void menu_sector(int dato) {
 
   switch (dato) {
     case 1:  //Se habilita el sector N° 1
-      //Habilitamos los sensores del sector N° 1
+      flagStateSector1 = 1;
+      //Habilitamos los sensores del sector N° 1 para mostrarlos:
       lectura_fotoresistencia = (analogRead(fotoresistencia) / 4095) * 100;  // PIN 39
       lectura_sensorSuelo1 = analogRead(sensorSuelo1);
       lectura_sensorTemp = analogRead(sensorTemp) * 0.1;  //  10mv/°C PIN 33
@@ -444,8 +464,15 @@ void menu_sector(int dato) {
       topic_Sensor2 = "Inf/SensoHumedad1";
       topic_Sensor3 = "Inf/CantLuz";
 
+      activarRelesSector(lectura_fotoresistencia, lectura_sensorSuelo1, lectura_sensorTemp);
       enviar_datoSensor_MQTT(lectura_sensorTemp, lectura_fotoresistencia, lectura_sensorSuelo1, topic_Sensor1, topic_Sensor2, topic_Sensor3);
+
       break;
+  }
+}
+
+void activarRelesSector(float temp, float fotoresistencia, int senorSuelo) {
+  if (flagStateSector1) {
   }
 }
 
