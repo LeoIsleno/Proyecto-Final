@@ -9,3 +9,6 @@ https://www.youtube.com/watch?v=zmcjHS5624k
 EEMPROM:
 https://docs.arduino.cc/learn/built-in-libraries/eeprom#example
 https://www.youtube.com/watch?v=quUf47CAhcs
+
+ENUM: 
+https://www.geeksforgeeks.org/enumeration-enum-c/
