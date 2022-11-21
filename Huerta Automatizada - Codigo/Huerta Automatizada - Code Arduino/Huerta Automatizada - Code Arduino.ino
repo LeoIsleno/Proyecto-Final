@@ -1,27 +1,32 @@
 /*
- * 20/11/22 
+ * Autor: Leonardo Isleño - ITS VILLADA 2022
+ * 
  * Funcionalidad de los 3 sectores correcta en el momento de cosecha.
- * Proximamente se utilizara EEPROM para gestionar e ltiempo de accionamiento de los reles.
+ * Proximamente se utilizara EEPROM para gestionar e ltiempo de accionamiento de los reles para activar la LUZ y las ELECTROVALVULAS.
 */
 
-#include <WiFi.h>  // Para el ESP32
-#include <EEPROM.h>
-#include <PubSubClient.h>  //Libreria para metodo MQTT
+#include <WiFi.h>          // Para el ESP32
+#include <EEPROM.h>        // Libreria para utilizar EEPROM
+#include <PubSubClient.h>  // Libreria para metodo MQTT
 #include <MQTT.h>
-WiFiClient WIFI_CLIENT;    //Libreria Wifi
+WiFiClient WIFI_CLIENT;  // Libreria Wifi
 PubSubClient MQTT_CLIENT;
 
 #define EEPROM_SIZE 64
 
+#define fotoresistencia 39
+#define sensorSuelo3 35
+#define sensorSuelo2 34
+#define sensorSuelo1 32
+#define sensorTemp 33
+
+#define relaySector1_LUZ 15
+#define relaySector2_LUZ 2
+#define relaySector3_LUZ 4
+
 const char* ssid = "Leouu";          //Nombre del Wifi
 const char* password = "leo12345S";  //Contraseña del wifi
 
-const int fotoresistencia = 39;
-const int sensorSuelo3 = 35;
-const int sensorSuelo2 = 34;
-const int sensorSuelo1 = 32;
-
-const int sensorTemp = 33;
 //const int relay = 19;
 
 bool StateSectorActivate = 0, flagFechaComprobar = 0, flagActivarCFC1 = 0, flagActivarCFC2 = 0, flagActivarCFC3 = 0, flagActivarCFC = 0, flagGlobalActivarAlerta = 0, flagStateSector1 = 0, flagStateSector2 = 0, flagStateSector3 = 0;
@@ -35,11 +40,11 @@ void setup() {
   /*Iniciamos el terminal Serial a una velocidad de 115200, junto a un retardo de 1 segundo y definimos los pines a utilizar*/
   Serial.begin(115200);  //Inicializa el serial begin a 115200
 
-  EEPROM.begin(EEPROM_SIZE);
+  EEPROM.begin(EEPROM_SIZE);  //Se inicializa EEPROM
   //EEPROM.write(0,0);
-  estado = EEPROM.read(0);
+  estado = EEPROM.read(0);  //
   Serial.print("Valor de EEPROM inicial: ");
-  Serial.println(estado); 
+  Serial.println(estado);
 
   delay(1000);  // 1 segundo
   Serial.println("Sensores Instalados y listos");
@@ -94,17 +99,17 @@ void loop() {
   //MQTT_CLIENT.loop();  // Testea la suscripcion
   delay(5000);
   estado = 0;
-  EEPROM.put(0,estado);
+  EEPROM.put(0, estado);
   EEPROM.commit();
   Serial.print("Valor de EEPROM en loop ");
-  Serial.println(estado); 
+  Serial.println(estado);
   delay(5000);
 
   estado = 1;
-  EEPROM.put(0,estado);
+  EEPROM.put(0, estado);
   EEPROM.commit();
   Serial.print("Valor de EEPROM en loop ");
-  Serial.println(estado); 
+  Serial.println(estado);
   delay(5000);
 }
 
@@ -464,18 +469,18 @@ void menu_sector(int dato) {
       topic_Sensor2 = "Inf/SensoHumedad1";
       topic_Sensor3 = "Inf/CantLuz";
 
-      activarRelesSector(lectura_fotoresistencia, lectura_sensorSuelo1, lectura_sensorTemp);
+      //activarRelesSector(lectura_fotoresistencia, lectura_sensorSuelo1, lectura_sensorTemp);
       enviar_datoSensor_MQTT(lectura_sensorTemp, lectura_fotoresistencia, lectura_sensorSuelo1, topic_Sensor1, topic_Sensor2, topic_Sensor3);
 
       break;
   }
 }
-
+/*
 void activarRelesSector(float temp, float fotoresistencia, int senorSuelo) {
   if (flagStateSector1) {
   }
 }
-
+*/
 //Envio de datos por MQTT a App Inventor
 void enviar_datoSensor_MQTT(float lecturaTemp, float lecturaLuz, int lecturaSuelo, char* topic_Sensor1, char* topic_Sensor2, char* topic_Sensor3) {
   static unsigned long lastMillis_publish_1 = millis();  //Variable a guardar el tiempo de millis

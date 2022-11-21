@@ -9,6 +9,7 @@ https://www.youtube.com/watch?v=zmcjHS5624k
 EEMPROM:
 https://docs.arduino.cc/learn/built-in-libraries/eeprom#example
 https://www.youtube.com/watch?v=quUf47CAhcs
+https://www.aranacorp.com/es/uso-de-la-eeprom-con-el-esp32/
 
 ENUM: 
 https://www.geeksforgeeks.org/enumeration-enum-c/
