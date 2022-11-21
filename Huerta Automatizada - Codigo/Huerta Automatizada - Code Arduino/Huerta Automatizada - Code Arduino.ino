@@ -1,7 +1,9 @@
 /*
- * Autor: Leonardo Isleño - ITS VILLADA 2022
+ * Autor: Leonardo Isleño - ITS VILLADA 
  * 
- * Funcionalidad de los 3 sectores correcta en el momento de cosecha.
+ * 20/11/22 - Funcionalidad de los 3 sectores correcta en el momento de cosecha.
+ * 21/11/11 - Optimizacion del codigo, preparando para el uso de Reles.
+ *          - Pruebas de EEPROM exitosas.
  * Proximamente se utilizara EEPROM para gestionar e ltiempo de accionamiento de los reles para activar la LUZ y las ELECTROVALVULAS.
 */
 
@@ -31,6 +33,8 @@ const char* password = "leo12345S";  //Contraseña del wifi
 
 bool StateSectorActivate = 0, flagFechaComprobar = 0, flagActivarCFC1 = 0, flagActivarCFC2 = 0, flagActivarCFC3 = 0, flagActivarCFC = 0, flagGlobalActivarAlerta = 0, flagStateSector1 = 0, flagStateSector2 = 0, flagStateSector3 = 0;
 String fechaHoy = "a", fechaCultivo1 = "b", fechaCultivo2 = "c", fechaCultivo3 = "d";
+
+bool relayStateSectorLuz[2] = { 0, 0, 0 };  //Sectores de Luz desactivados al inicializar
 
 bool estado = 0;
 
@@ -95,8 +99,9 @@ void loop() {
   if (!MQTT_CLIENT.connected()) {
     reconnect();
   }
-  //menu_sector(StateSectorActivate);
-  //MQTT_CLIENT.loop();  // Testea la suscripcion
+  menu_sector(StateSectorActivate);
+  MQTT_CLIENT.loop();  // Testea la suscripcion
+
   delay(5000);
   estado = 0;
   EEPROM.put(0, estado);
@@ -450,37 +455,42 @@ String fecha_cosecha(String Fecha, int cantMes) {
 
 //Segun el flag activada se activan diferentes sensores a su correspondiente sector
 void menu_sector(int dato) {
-  float lectura_fotoresistencia, lectura_sensorTemp;
-  int lectura_sensorSuelo1, lectura_sensorSuelo2, lectura_sensorSuelo3;
+  //int lectura_sensorSuelo1, lectura_sensorSuelo2, lectura_sensorSuelo3, lectura_fotoresistencia, lectura_sensorTemp;
 
-  char* topic_Sensor1;
-  char* topic_Sensor2;
-  char* topic_Sensor3;
+  int sensores[4] = { 0, 0, 0, 0, 0 };  //Temperatura, fotoresistencia, Sensor suelo1, Sensor suelo2, Sensor suelo3,
+
+  sensores[0] = analogRead(sensorTemp) * 0.1;                //  10mv/°C PIN 33
+  sensores[1] = (analogRead(fotoresistencia) / 4095) * 100;  // PIN 39
+  sensores[2] = analogRead(sensorSuelo1);
+  sensores[3] = analogRead(sensorSuelo2);
+  sensores[4] = analogRead(sensorSuelo3);
+
+  char* topic_Sensor1 = "";
+  char* topic_Sensor2 = "";
+  char* topic_Sensor3 = "";
 
   switch (dato) {
     case 1:  //Se habilita el sector N° 1
-      flagStateSector1 = 1;
       //Habilitamos los sensores del sector N° 1 para mostrarlos:
-      lectura_fotoresistencia = (analogRead(fotoresistencia) / 4095) * 100;  // PIN 39
-      lectura_sensorSuelo1 = analogRead(sensorSuelo1);
-      lectura_sensorTemp = analogRead(sensorTemp) * 0.1;  //  10mv/°C PIN 33
+
+      relayStateSectorLuz[1] = 1;
 
       topic_Sensor1 = "Inf/SensorTemperatura";
       topic_Sensor2 = "Inf/SensoHumedad1";
       topic_Sensor3 = "Inf/CantLuz";
 
-      //activarRelesSector(lectura_fotoresistencia, lectura_sensorSuelo1, lectura_sensorTemp);
-      enviar_datoSensor_MQTT(lectura_sensorTemp, lectura_fotoresistencia, lectura_sensorSuelo1, topic_Sensor1, topic_Sensor2, topic_Sensor3);
-
+      activarRelesSector(sensores[1], sensores[2], sensores[0]);
+      enviar_datoSensor_MQTT(sensores[0], sensores[1], sensores[2], topic_Sensor1, topic_Sensor2, topic_Sensor3);
       break;
   }
+  return 
 }
-/*
+
 void activarRelesSector(float temp, float fotoresistencia, int senorSuelo) {
-  if (flagStateSector1) {
+  if (relayStateSectorLuz[1] == 1) {
   }
 }
-*/
+
 //Envio de datos por MQTT a App Inventor
 void enviar_datoSensor_MQTT(float lecturaTemp, float lecturaLuz, int lecturaSuelo, char* topic_Sensor1, char* topic_Sensor2, char* topic_Sensor3) {
   static unsigned long lastMillis_publish_1 = millis();  //Variable a guardar el tiempo de millis

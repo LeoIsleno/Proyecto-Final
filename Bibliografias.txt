@@ -1,3 +1,5 @@
+ESP32:
+https://lastminuteengineers.b-cdn.net/wp-content/uploads/iot/ESP32-Pinout.png
 https://www.youtube.com/watch?v=WAimZhU5phs
 https://community.appinventor.mit.edu/t/esp32-mqtt-broker-publish-subscribe-thingspeak/10490/7
 
@@ -13,4 +15,3 @@ https://www.aranacorp.com/es/uso-de-la-eeprom-con-el-esp32/
 
 ENUM: 
 https://www.geeksforgeeks.org/enumeration-enum-c/
-0
