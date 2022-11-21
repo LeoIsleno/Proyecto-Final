@@ -13,3 +13,4 @@ https://www.aranacorp.com/es/uso-de-la-eeprom-con-el-esp32/
 
 ENUM: 
 https://www.geeksforgeeks.org/enumeration-enum-c/
+0
