@@ -520,97 +520,98 @@ void activarRelesSector(int array[]) {
   static unsigned long TdesactivoSector1 = millis();  //Variable a guardar el tiempo de millis
 
   // Tomates y Cebollas
-  if (flagDesactivarSectores[1] == 0) {
-    luzDiaSectores[1] = 1;
-    if (millis() - TactivoSector1 >= 2000) {
-      TactivoSector1 = millis();
-      cantHorasActivado[1] = cantHorasActivado[1] + 1;
-      Serial.print("Horas Activo: ");
-      Serial.println(cantHorasActivado[1]);
 
-      //Contador de horas Activado
-      EEPROM.put(6, cantHorasActivado[1]);  //Direccion - Variable
-      EEPROM.commit();                      //Confirmar
-
-      //Bandera para el contador de tiempo encendido
-      EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
-      EEPROM.commit();                           //Confirmar
-
-      //Bandera de encendido para el sector 1
-      EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
-      EEPROM.commit();                   //Confirmar
-    }
-    if (cantHorasActivado[1] >= 5) {
-
-      Serial.print("Ciclo Cumplido");
-      flagDesactivarSectores[1] = 1;
-      cantHorasActivado[1] = 0;
-
-      //Contador de horas Activado
-      EEPROM.put(6, cantHorasActivado[1]);  //Direccion - Variable
-      EEPROM.commit();                      //Confirmar
-
-      //Bandera para el contador de tiempo encendido
-      EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
-      EEPROM.commit();                           //Confirmar
-
-      //Bandera de encendido para el sector 1
-      EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
-      EEPROM.commit();                   //Confirmar
-    }
-  }
-
-  if (flagDesactivarSectores[1] == 1) {
-    luzDiaSectores[1] = 0;
-    if (millis() - TdesactivoSector1 >= 2000) {
-      TdesactivoSector1 = millis();
-      cantHorasDesactivado[1] = cantHorasDesactivado[1] + 1;
-      Serial.print("Horas Desactivado: ");
-      Serial.println(cantHorasDesactivado[1]);
-
-      //Contador de horas desactivado
-      EEPROM.put(9, cantHorasDesactivado[1]);  //Direccion - Variable
-      EEPROM.commit();                         //Confirmar
-
-      //Bandera para el contador de tiempo encendido
-      EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
-      EEPROM.commit();                           //Confirmar
-
-      //Bandera de encendido para el sector 1
-      EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
-      EEPROM.commit();                   //Confirmar
-    }
-
-    if (cantHorasDesactivado[1] == 5) {
-      Serial.println("Ciclo desactivado Cumplido");
-      flagDesactivarSectores[1] = 0;  //Estado : Apagado
-      cantHorasDesactivado[1] = 0;
-
-      //Contador de horas desactivado
-      EEPROM.put(9, cantHorasDesactivado[1]);  //Direccion - Variable
-      EEPROM.commit();                         //Confirmar
-
-      //Bandera para el contador de tiempo encendido/apagado
-      EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
-      EEPROM.commit();                           //Confirmar
-
-      //Bandera de encendido para el sector 1
-      EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
-      EEPROM.commit();                   //Confirmar
-    }
-  }
 
   if (relayStateSectorLuz[1] == 1) {
+
+    if (flagDesactivarSectores[1] == 0) {
+      luzDiaSectores[1] = 1;
+      if (millis() - TactivoSector1 >= 2000) {
+        TactivoSector1 = millis();
+        cantHorasActivado[1] = cantHorasActivado[1] + 1;
+        Serial.print("Horas Activo: ");
+        Serial.println(cantHorasActivado[1]);
+
+        //Contador de horas Activado
+        EEPROM.put(6, cantHorasActivado[1]);  //Direccion - Variable
+        EEPROM.commit();                      //Confirmar
+
+        //Bandera para el contador de tiempo encendido
+        EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                           //Confirmar
+
+        //Bandera de encendido para el sector 1
+        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                   //Confirmar
+      }
+      if (cantHorasActivado[1] >= 5) {
+
+        Serial.print("Ciclo Cumplido");
+        flagDesactivarSectores[1] = 1;
+        cantHorasActivado[1] = 0;
+
+        //Contador de horas Activado
+        EEPROM.put(6, cantHorasActivado[1]);  //Direccion - Variable
+        EEPROM.commit();                      //Confirmar
+
+        //Bandera para el contador de tiempo encendido
+        EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                           //Confirmar
+
+        //Bandera de encendido para el sector 1
+        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                   //Confirmar
+      }
+    }
+
+    if (flagDesactivarSectores[1] == 1) {
+      luzDiaSectores[1] = 0;
+      if (millis() - TdesactivoSector1 >= 2000) {
+        TdesactivoSector1 = millis();
+        cantHorasDesactivado[1] = cantHorasDesactivado[1] + 1;
+        Serial.print("Horas Desactivado: ");
+        Serial.println(cantHorasDesactivado[1]);
+
+        //Contador de horas desactivado
+        EEPROM.put(9, cantHorasDesactivado[1]);  //Direccion - Variable
+        EEPROM.commit();                         //Confirmar
+
+        //Bandera para el contador de tiempo encendido
+        EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                           //Confirmar
+
+        //Bandera de encendido para el sector 1
+        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                   //Confirmar
+      }
+
+      if (cantHorasDesactivado[1] == 5) {
+        Serial.println("Ciclo desactivado Cumplido");
+        flagDesactivarSectores[1] = 0;  //Estado : Apagado
+        cantHorasDesactivado[1] = 0;
+
+        //Contador de horas desactivado
+        EEPROM.put(9, cantHorasDesactivado[1]);  //Direccion - Variable
+        EEPROM.commit();                         //Confirmar
+
+        //Bandera para el contador de tiempo encendido/apagado
+        EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                           //Confirmar
+
+        //Bandera de encendido para el sector 1
+        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                   //Confirmar
+      }
+    }
+
     if (luzDiaSectores[1] == 1) {
       Serial.println("Rele Activado");
       digitalWrite(relaySector1_LUZ, HIGH);
-
-      delay(1000);
     } else {
       digitalWrite(relaySector1_LUZ, LOW);
       Serial.println("Rele desactivado");
-      delay(1000);
     }
+    
   }
 }
 
