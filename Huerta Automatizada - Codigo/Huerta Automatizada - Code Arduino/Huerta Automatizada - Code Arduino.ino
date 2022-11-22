@@ -5,6 +5,8 @@
  * 21/11/11 - Optimizacion del codigo, preparando para el uso de Reles.
  *          - Pruebas de EEPROM exitosas.
  * 22/11/22 - EEPROM para gestionar el tiempo de accionamiento de los reles para activar la LUZ, en sector uno funcionando - Falta desctivar el sector una vez cosechado
+
+ PROBLEMA: Al utilizar EEPROM el programa se desconfigura, no me deja comparar fechas.
 */
 
 #include <WiFi.h>          // Para el ESP32
@@ -41,7 +43,7 @@ static int cantHorasActivado[3] = { 0, 0, 0 }, cantHorasDesactivado[3] = { 0, 0,
 
 bool estado = 0;
 
-void recived(String topic, String valor);
+//void recived(String topic, String valor);
 
 void setup() {
   /*Iniciamos el terminal Serial a una velocidad de 115200, junto a un retardo de 1 segundo y definimos los pines a utilizar*/
@@ -64,7 +66,7 @@ void setup() {
   //cantHorasActivado[2] = EEPROM.read(7);
   //cantHorasActivado[3] = EEPROM.read(8);
 
-  //Asignamos las variables cargadas anteriormente  
+  //Asignamos las variables cargadas anteriormente
   cantHorasDesactivado[1] = EEPROM.read(9);
   //cantHorasDesactivado[2] = EEPROM.read(10);
   //cantHorasDesactivado[3] = EEPROM.read(11);
@@ -144,7 +146,48 @@ void recived(String topic, String valor) {
   char* enviarTopic1 = "Fecha/cosecha1";
   char* enviarTopic2 = "Fecha/cosecha2";
   char* enviarTopic3 = "Fecha/cosecha3";
+/*
+  if (topic = "Reles/Sector1") {
+    if (valor == "1") {
+      relayStateSectorLuz[1] = 1;
 
+      EEPROM.put(12, relayStateSectorLuz[1]);  //Direccion - Variable
+      EEPROM.commit();                         //Confirmar
+    } else {
+      relayStateSectorLuz[1] = 0;
+
+      EEPROM.put(12, relayStateSectorLuz[1]);  //Direccion - Variable
+      EEPROM.commit();
+    }
+  }
+
+  if (topic = "Reles/Sector2") {
+    if (valor == "1") {
+      relayStateSectorLuz[2] = 1;
+
+      EEPROM.put(13, relayStateSectorLuz[1]);  //Direccion - Variable
+      EEPROM.commit();                         //Confirmar
+    } else {
+      relayStateSectorLuz[2] = 0;
+
+      EEPROM.put(13, relayStateSectorLuz[1]);  //Direccion - Variable
+      EEPROM.commit();
+    }
+  }
+
+  if (topic = "Reles/Sector3") {
+    if (valor == "1") {
+      relayStateSectorLuz[3] = 1;
+
+      EEPROM.put(14, relayStateSectorLuz[1]);  //Direccion - Variable
+      EEPROM.commit();                         //Confirmar
+    } else {
+      relayStateSectorLuz[3] = 0;
+      EEPROM.put(14, relayStateSectorLuz[1]);  //Direccion - Variable
+      EEPROM.commit();
+    }
+  }
+*/
 
   if (topic == "State/Sector1") {
     if (valor == "1") {
@@ -207,30 +250,11 @@ void recived(String topic, String valor) {
 
   if (topic == "Tomates/Fecha2") {
     eleccion = 1;
-
-    /*
-    Serial.print("Codigo recibido: ");
-    Serial.println(eleccion);
-    Serial.println("  ");
-
-    Serial.print("Fecha de cultivo elegido:");
-    Serial.println(valor);
-    Serial.println("  ");
-    */
     seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Tomates/Fecha3") {
     eleccion = 1;
-    /*
-    Serial.print("Codigo recibido: ");
-    Serial.println(eleccion);
-    Serial.println("  ");
-
-    Serial.print("Fecha de cultivo elegido:");
-    Serial.println(valor);
-    Serial.println("  ");
-    */
     seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
@@ -302,10 +326,11 @@ void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fecha
 
   //fechaCultivo1 = concatenarfecha(fechaCultivo1);
   fechaCultivo1 = concatenarfecha(fechaCultivo1);
-  fechaCultivo2 = concatenarfecha(fechaCultivo2);
+  fechaCultivo2 = concatenarfecha(fechaHoy);
   fechaCultivo3 = concatenarfecha(fechaCultivo3);
   fechaHoy = concatenarfecha(fechaHoy);
-  Serial.println(fechaCultivo3);
+
+  Serial.println(fechaCultivo1);
   Serial.println(fechaHoy);
 
   if (fechaCultivo1 == fechaHoy) {
@@ -320,12 +345,7 @@ void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fecha
     Serial.println("Alerta de Cosecha al sector 3");
     alertaCosecha(3, topicAlertaSector3);
     flagGlobalActivarAlerta = 1;
-  } /* else {
-    fechaCultivo1 = "a";
-    fechaCultivo2 = "b";
-    fechaCultivo3 = "c";
-    flagGlobalActivarAlerta = 0;
-  }*/
+  }
 }
 
 void alertaCosecha(int i, char* topic) {
@@ -484,20 +504,14 @@ void menu_sector(int dato) {
   sensores[4] = analogRead(sensorSuelo2);
   sensores[5] = analogRead(sensorSuelo3);
 
-
   char* topic_Sensor1 = "";
   char* topic_Sensor2 = "";
   char* topic_Sensor3 = "";
 
-
   switch (dato) {
     case 1:  //Se habilita el sector N° 1
       //Habilitamos los sensores del sector N° 1 para mostrarlos:
-      relayStateSectorLuz[1] = 1;
-
-      EEPROM.put(12, relayStateSectorLuz[1]);  //Direccion - Variable
-      EEPROM.commit();                         //Confirmar
-
+      Serial.print("Activado 1 ");
       topic_Sensor1 = "Inf/SensorTemperatura";
       topic_Sensor2 = "Inf/SensoHumedad1";
       topic_Sensor3 = "Inf/CantLuz";
@@ -506,7 +520,8 @@ void menu_sector(int dato) {
       enviar_datoSensor_MQTT(sensores[0], sensores[1], sensores[2], topic_Sensor1, topic_Sensor2, topic_Sensor3);
       break;
   }
-  activarRelesSector(sensores);
+
+  //activarRelesSector(sensores);
 }
 
 void activarRelesSector(int array[]) {
@@ -519,8 +534,7 @@ void activarRelesSector(int array[]) {
   static unsigned long TactivoSector1 = millis();     //Variable a guardar el tiempo de millis
   static unsigned long TdesactivoSector1 = millis();  //Variable a guardar el tiempo de millis
 
-  // Tomates y Cebollas
-
+  // Tomates
 
   if (relayStateSectorLuz[1] == 1) {
 
@@ -543,6 +557,7 @@ void activarRelesSector(int array[]) {
         //Bandera de encendido para el sector 1
         EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
         EEPROM.commit();                   //Confirmar
+        digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
       if (cantHorasActivado[1] >= 5) {
 
@@ -561,6 +576,7 @@ void activarRelesSector(int array[]) {
         //Bandera de encendido para el sector 1
         EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
         EEPROM.commit();                   //Confirmar
+        digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
     }
 
@@ -583,6 +599,8 @@ void activarRelesSector(int array[]) {
         //Bandera de encendido para el sector 1
         EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
         EEPROM.commit();                   //Confirmar
+
+        digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
 
       if (cantHorasDesactivado[1] == 5) {
@@ -601,17 +619,10 @@ void activarRelesSector(int array[]) {
         //Bandera de encendido para el sector 1
         EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
         EEPROM.commit();                   //Confirmar
+
+        digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
     }
-
-    if (luzDiaSectores[1] == 1) {
-      Serial.println("Rele Activado");
-      digitalWrite(relaySector1_LUZ, HIGH);
-    } else {
-      digitalWrite(relaySector1_LUZ, LOW);
-      Serial.println("Rele desactivado");
-    }
-    
   }
 }
 
@@ -685,12 +696,15 @@ void reconnect() {
     MQTT_CLIENT.subscribe("Zanahoria/Fecha3");  // Aca realiza la suscripcion
     MQTT_CLIENT.subscribe("Pimiento/Fecha3");   // Aca realiza la suscripcion
 
-
     MQTT_CLIENT.subscribe("Comprobar/FechaHoy");  // Aca realiza la suscripcion
     MQTT_CLIENT.subscribe("Comprobar/Cultivo1");  // Aca realiza la suscripcion
     MQTT_CLIENT.subscribe("Comprobar/Cultivo2");  // Aca realiza la suscripcion
     MQTT_CLIENT.subscribe("Comprobar/Cultivo3");  // Aca realiza la suscripcion
-
+/*
+    MQTT_CLIENT.subscribe("Reles/Sector1");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Reles/Sector2");  // Aca realiza la suscripcion
+    MQTT_CLIENT.subscribe("Reles/Sector3");  // Aca realiza la suscripcion
+*/
     // Espera para que conecte denuevo
     delay(3000);
   }
