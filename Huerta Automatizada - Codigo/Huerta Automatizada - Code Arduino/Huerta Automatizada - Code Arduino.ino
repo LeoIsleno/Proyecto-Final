@@ -1,8 +1,10 @@
 /*
- * Autor: Leonardo Isleño - ITS VILLADA 2022
+ * Autor: Leonardo Isleño - ITS VILLADA 
  * 
- * Funcionalidad de los 3 sectores correcta en el momento de cosecha.
- * Proximamente se utilizara EEPROM para gestionar e ltiempo de accionamiento de los reles para activar la LUZ y las ELECTROVALVULAS.
+ * 20/11/22 - Funcionalidad de los 3 sectores correcta en el momento de cosecha.
+ * 21/11/11 - Optimizacion del codigo, preparando para el uso de Reles.
+ *          - Pruebas de EEPROM exitosas.
+ * 22/11/22 - EEPROM para gestionar el tiempo de accionamiento de los reles para activar la LUZ, en sector uno funcionando - Falta desctivar el sector una vez cosechado
 */
 
 #include <WiFi.h>          // Para el ESP32
@@ -32,6 +34,11 @@ const char* password = "leo12345S";  //Contraseña del wifi
 bool StateSectorActivate = 0, flagFechaComprobar = 0, flagActivarCFC1 = 0, flagActivarCFC2 = 0, flagActivarCFC3 = 0, flagActivarCFC = 0, flagGlobalActivarAlerta = 0, flagStateSector1 = 0, flagStateSector2 = 0, flagStateSector3 = 0;
 String fechaHoy = "a", fechaCultivo1 = "b", fechaCultivo2 = "c", fechaCultivo3 = "d";
 
+bool relayStateSectorLuz[3] = { 0, 0, 0 };  //Sectores de Luz desactivados al inicializar - (Sector 1, Sector 2, Sector 3)
+
+static bool luzDiaSectores[3] = { 0, 0, 0 }, flagDesactivarSectores[3] = { 0, 0, 0 };
+static int cantHorasActivado[3] = { 0, 0, 0 }, cantHorasDesactivado[3] = { 0, 0, 0 };
+
 bool estado = 0;
 
 void recived(String topic, String valor);
@@ -41,10 +48,41 @@ void setup() {
   Serial.begin(115200);  //Inicializa el serial begin a 115200
 
   EEPROM.begin(EEPROM_SIZE);  //Se inicializa EEPROM
-  //EEPROM.write(0,0);
-  estado = EEPROM.read(0);  //
-  Serial.print("Valor de EEPROM inicial: ");
-  Serial.println(estado);
+
+  //Asignamos las variables cargadas anteriormente
+  luzDiaSectores[1] = EEPROM.read(0);
+  //luzDiaSectores[2] = EEPROM.read(1);
+  //luzDiaSectores[3] = EEPROM.read(2);
+
+  //Asignamos las variables cargadas anteriormente
+  flagDesactivarSectores[1] = EEPROM.read(3);
+  //flagDesactivarSectores[2] = EEPROM.read(4);
+  //flagDesactivarSectores[3] = EEPROM.read(5);
+
+  //Asignamos las variables cargadas anteriormente
+  cantHorasActivado[1] = EEPROM.read(6);
+  //cantHorasActivado[2] = EEPROM.read(7);
+  //cantHorasActivado[3] = EEPROM.read(8);
+
+  //Asignamos las variables cargadas anteriormente  
+  cantHorasDesactivado[1] = EEPROM.read(9);
+  //cantHorasDesactivado[2] = EEPROM.read(10);
+  //cantHorasDesactivado[3] = EEPROM.read(11);
+
+  //Sectores Activados - Activar Reles
+  relayStateSectorLuz[1] = EEPROM.read(12);
+  //relayStateSectorLuz[2] = EEPROM.read(13);
+  //relayStateSectorLuz[3] = EEPROM.read(14);
+
+  //Se define los pines de los reles como salidas
+  pinMode(relaySector1_LUZ, OUTPUT);
+  pinMode(relaySector2_LUZ, OUTPUT);
+  pinMode(relaySector3_LUZ, OUTPUT);
+
+  //Inicializamos los reles con el ultimo estado
+  digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
+  digitalWrite(relaySector2_LUZ, luzDiaSectores[2]);
+  digitalWrite(relaySector3_LUZ, luzDiaSectores[3]);
 
   delay(1000);  // 1 segundo
   Serial.println("Sensores Instalados y listos");
@@ -95,22 +133,8 @@ void loop() {
   if (!MQTT_CLIENT.connected()) {
     reconnect();
   }
-  //menu_sector(StateSectorActivate);
-  //MQTT_CLIENT.loop();  // Testea la suscripcion
-  delay(5000);
-  estado = 0;
-  EEPROM.put(0, estado);
-  EEPROM.commit();
-  Serial.print("Valor de EEPROM en loop ");
-  Serial.println(estado);
-  delay(5000);
-
-  estado = 1;
-  EEPROM.put(0, estado);
-  EEPROM.commit();
-  Serial.print("Valor de EEPROM en loop ");
-  Serial.println(estado);
-  delay(5000);
+  menu_sector(StateSectorActivate);
+  MQTT_CLIENT.loop();  // Testea la suscripcion
 }
 
 //Segun lo recibido desde la App segun el topic y mensaje recibido actua
@@ -450,37 +474,147 @@ String fecha_cosecha(String Fecha, int cantMes) {
 
 //Segun el flag activada se activan diferentes sensores a su correspondiente sector
 void menu_sector(int dato) {
-  float lectura_fotoresistencia, lectura_sensorTemp;
-  int lectura_sensorSuelo1, lectura_sensorSuelo2, lectura_sensorSuelo3;
+  //int lectura_sensorSuelo1, lectura_sensorSuelo2, lectura_sensorSuelo3, lectura_fotoresistencia, lectura_sensorTemp;
 
-  char* topic_Sensor1;
-  char* topic_Sensor2;
-  char* topic_Sensor3;
+  int sensores[5] = { 0, 0, 0, 0, 0 };  //Temperatura, fotoresistencia, Sensor suelo1, Sensor suelo2, Sensor suelo3,
+
+  sensores[1] = analogRead(sensorTemp) * 0.1;                //  10mv/°C PIN 33
+  sensores[2] = (analogRead(fotoresistencia) / 4095) * 100;  // PIN 39
+  sensores[3] = analogRead(sensorSuelo1);
+  sensores[4] = analogRead(sensorSuelo2);
+  sensores[5] = analogRead(sensorSuelo3);
+
+
+  char* topic_Sensor1 = "";
+  char* topic_Sensor2 = "";
+  char* topic_Sensor3 = "";
+
 
   switch (dato) {
     case 1:  //Se habilita el sector N° 1
-      flagStateSector1 = 1;
       //Habilitamos los sensores del sector N° 1 para mostrarlos:
-      lectura_fotoresistencia = (analogRead(fotoresistencia) / 4095) * 100;  // PIN 39
-      lectura_sensorSuelo1 = analogRead(sensorSuelo1);
-      lectura_sensorTemp = analogRead(sensorTemp) * 0.1;  //  10mv/°C PIN 33
+      relayStateSectorLuz[1] = 1;
+
+      EEPROM.put(12, relayStateSectorLuz[1]);  //Direccion - Variable
+      EEPROM.commit();                         //Confirmar
 
       topic_Sensor1 = "Inf/SensorTemperatura";
       topic_Sensor2 = "Inf/SensoHumedad1";
       topic_Sensor3 = "Inf/CantLuz";
 
-      //activarRelesSector(lectura_fotoresistencia, lectura_sensorSuelo1, lectura_sensorTemp);
-      enviar_datoSensor_MQTT(lectura_sensorTemp, lectura_fotoresistencia, lectura_sensorSuelo1, topic_Sensor1, topic_Sensor2, topic_Sensor3);
-
+      //activarRelesSector(sensores[1], sensores[2], sensores[0]);
+      enviar_datoSensor_MQTT(sensores[0], sensores[1], sensores[2], topic_Sensor1, topic_Sensor2, topic_Sensor3);
       break;
   }
+  activarRelesSector(sensores);
 }
-/*
-void activarRelesSector(float temp, float fotoresistencia, int senorSuelo) {
-  if (flagStateSector1) {
+
+void activarRelesSector(int array[]) {
+  int temp = *(array + 1);       //Sensor Temperatura
+  int Fres = *(array + 2);       //Sensor Fotoresistencia
+  int senSuelo1 = *(array + 3);  //Sensor de Suelo 1
+  int senSuelo2 = *(array + 4);  //Sensor de Suelo 2
+  int senSuelo3 = *(array + 5);  //Sensor de Suelo 3
+
+  static unsigned long TactivoSector1 = millis();     //Variable a guardar el tiempo de millis
+  static unsigned long TdesactivoSector1 = millis();  //Variable a guardar el tiempo de millis
+
+  // Tomates y Cebollas
+
+
+  if (relayStateSectorLuz[1] == 1) {
+
+    if (flagDesactivarSectores[1] == 0) {
+      luzDiaSectores[1] = 1;
+      if (millis() - TactivoSector1 >= 2000) {
+        TactivoSector1 = millis();
+        cantHorasActivado[1] = cantHorasActivado[1] + 1;
+        Serial.print("Horas Activo: ");
+        Serial.println(cantHorasActivado[1]);
+
+        //Contador de horas Activado
+        EEPROM.put(6, cantHorasActivado[1]);  //Direccion - Variable
+        EEPROM.commit();                      //Confirmar
+
+        //Bandera para el contador de tiempo encendido
+        EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                           //Confirmar
+
+        //Bandera de encendido para el sector 1
+        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                   //Confirmar
+      }
+      if (cantHorasActivado[1] >= 5) {
+
+        Serial.print("Ciclo Cumplido");
+        flagDesactivarSectores[1] = 1;
+        cantHorasActivado[1] = 0;
+
+        //Contador de horas Activado
+        EEPROM.put(6, cantHorasActivado[1]);  //Direccion - Variable
+        EEPROM.commit();                      //Confirmar
+
+        //Bandera para el contador de tiempo encendido
+        EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                           //Confirmar
+
+        //Bandera de encendido para el sector 1
+        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                   //Confirmar
+      }
+    }
+
+    if (flagDesactivarSectores[1] == 1) {
+      luzDiaSectores[1] = 0;
+      if (millis() - TdesactivoSector1 >= 2000) {
+        TdesactivoSector1 = millis();
+        cantHorasDesactivado[1] = cantHorasDesactivado[1] + 1;
+        Serial.print("Horas Desactivado: ");
+        Serial.println(cantHorasDesactivado[1]);
+
+        //Contador de horas desactivado
+        EEPROM.put(9, cantHorasDesactivado[1]);  //Direccion - Variable
+        EEPROM.commit();                         //Confirmar
+
+        //Bandera para el contador de tiempo encendido
+        EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                           //Confirmar
+
+        //Bandera de encendido para el sector 1
+        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                   //Confirmar
+      }
+
+      if (cantHorasDesactivado[1] == 5) {
+        Serial.println("Ciclo desactivado Cumplido");
+        flagDesactivarSectores[1] = 0;  //Estado : Apagado
+        cantHorasDesactivado[1] = 0;
+
+        //Contador de horas desactivado
+        EEPROM.put(9, cantHorasDesactivado[1]);  //Direccion - Variable
+        EEPROM.commit();                         //Confirmar
+
+        //Bandera para el contador de tiempo encendido/apagado
+        EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                           //Confirmar
+
+        //Bandera de encendido para el sector 1
+        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
+        EEPROM.commit();                   //Confirmar
+      }
+    }
+
+    if (luzDiaSectores[1] == 1) {
+      Serial.println("Rele Activado");
+      digitalWrite(relaySector1_LUZ, HIGH);
+    } else {
+      digitalWrite(relaySector1_LUZ, LOW);
+      Serial.println("Rele desactivado");
+    }
+    
   }
 }
-*/
+
 //Envio de datos por MQTT a App Inventor
 void enviar_datoSensor_MQTT(float lecturaTemp, float lecturaLuz, int lecturaSuelo, char* topic_Sensor1, char* topic_Sensor2, char* topic_Sensor3) {
   static unsigned long lastMillis_publish_1 = millis();  //Variable a guardar el tiempo de millis
