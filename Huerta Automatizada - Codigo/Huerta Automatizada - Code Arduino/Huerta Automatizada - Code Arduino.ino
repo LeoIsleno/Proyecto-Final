@@ -34,7 +34,7 @@ const char* password = "leo12345S";  //Contraseña del wifi
 bool StateSectorActivate = 0, flagFechaComprobar = 0, flagActivarCFC1 = 0, flagActivarCFC2 = 0, flagActivarCFC3 = 0, flagActivarCFC = 0, flagGlobalActivarAlerta = 0, flagStateSector1 = 0, flagStateSector2 = 0, flagStateSector3 = 0;
 String fechaHoy = "a", fechaCultivo1 = "b", fechaCultivo2 = "c", fechaCultivo3 = "d";
 
-bool relayStateSectorLuz[2] = { 0, 0, 0 };  //Sectores de Luz desactivados al inicializar
+bool relayStateSectorLuz[3] = { 0, 0, 0 };  //Sectores de Luz desactivados al inicializar - (Sector 1, Sector 2, Sector 3)
 
 bool estado = 0;
 
@@ -49,6 +49,11 @@ void setup() {
   estado = EEPROM.read(0);  //
   Serial.print("Valor de EEPROM inicial: ");
   Serial.println(estado);
+
+  //Se define los pines de los reles como salidas
+  pinMode(relaySector1_LUZ, OUTPUT);
+  pinMode(relaySector2_LUZ, OUTPUT);
+  pinMode(relaySector3_LUZ, OUTPUT);
 
   delay(1000);  // 1 segundo
   Serial.println("Sensores Instalados y listos");
@@ -102,6 +107,7 @@ void loop() {
   menu_sector(StateSectorActivate);
   MQTT_CLIENT.loop();  // Testea la suscripcion
 
+  /*
   delay(5000);
   estado = 0;
   EEPROM.put(0, estado);
@@ -116,6 +122,7 @@ void loop() {
   Serial.print("Valor de EEPROM en loop ");
   Serial.println(estado);
   delay(5000);
+  */
 }
 
 //Segun lo recibido desde la App segun el topic y mensaje recibido actua
@@ -457,38 +464,95 @@ String fecha_cosecha(String Fecha, int cantMes) {
 void menu_sector(int dato) {
   //int lectura_sensorSuelo1, lectura_sensorSuelo2, lectura_sensorSuelo3, lectura_fotoresistencia, lectura_sensorTemp;
 
-  int sensores[4] = { 0, 0, 0, 0, 0 };  //Temperatura, fotoresistencia, Sensor suelo1, Sensor suelo2, Sensor suelo3,
+  int sensores[5] = { 0, 0, 0, 0, 0 };  //Temperatura, fotoresistencia, Sensor suelo1, Sensor suelo2, Sensor suelo3,
 
-  sensores[0] = analogRead(sensorTemp) * 0.1;                //  10mv/°C PIN 33
-  sensores[1] = (analogRead(fotoresistencia) / 4095) * 100;  // PIN 39
-  sensores[2] = analogRead(sensorSuelo1);
-  sensores[3] = analogRead(sensorSuelo2);
-  sensores[4] = analogRead(sensorSuelo3);
+  sensores[1] = analogRead(sensorTemp) * 0.1;                //  10mv/°C PIN 33
+  sensores[2] = (analogRead(fotoresistencia) / 4095) * 100;  // PIN 39
+  sensores[3] = analogRead(sensorSuelo1);
+  sensores[4] = analogRead(sensorSuelo2);
+  sensores[5] = analogRead(sensorSuelo3);
+
 
   char* topic_Sensor1 = "";
   char* topic_Sensor2 = "";
   char* topic_Sensor3 = "";
 
+  relayStateSectorLuz[1] = 1;
+
   switch (dato) {
     case 1:  //Se habilita el sector N° 1
       //Habilitamos los sensores del sector N° 1 para mostrarlos:
 
-      relayStateSectorLuz[1] = 1;
+
 
       topic_Sensor1 = "Inf/SensorTemperatura";
       topic_Sensor2 = "Inf/SensoHumedad1";
       topic_Sensor3 = "Inf/CantLuz";
 
-      activarRelesSector(sensores[1], sensores[2], sensores[0]);
+      //activarRelesSector(sensores[1], sensores[2], sensores[0]);
       enviar_datoSensor_MQTT(sensores[0], sensores[1], sensores[2], topic_Sensor1, topic_Sensor2, topic_Sensor3);
       break;
   }
-  return 
+  activarRelesSector(sensores);
 }
 
-void activarRelesSector(float temp, float fotoresistencia, int senorSuelo) {
-  if (relayStateSectorLuz[1] == 1) {
+void activarRelesSector(int array[]) {
+  int temp = *(array + 1);       //Sensor Temperatura
+  int Fres = *(array + 2);       //Sensor Fotoresistencia
+  int senSuelo1 = *(array + 3);  //Sensor de Suelo 1
+  int senSuelo2 = *(array + 4);  //Sensor de Suelo 2
+  int senSuelo3 = *(array + 5);  //Sensor de Suelo 3
+
+  static unsigned long TactivoSector1 = millis();     //Variable a guardar el tiempo de millis
+  static unsigned long TdesactivoSector1 = millis();  //Variable a guardar el tiempo de millis
+
+  static unsigned long TactivoSector3 = millis();  //Variable a guardar el tiempo de millis
+
+  static bool luzDiaSector1 = 0, flagDesactivarSector1 = 0;
+  static int contHorasActivado = 0, contHorasDesactivado = 0;
+  // Tomates y Cebollas
+
+  if (flagDesactivarSector1 == 0) {
+    luzDiaSector1 = 1;
+    if (millis() - TactivoSector1 >= 2000) {
+      TactivoSector1 = millis();
+      contHorasActivado = contHorasActivado + 1;
+      Serial.print("Horas Activo: ");
+      Serial.println(contHorasActivado);
+    } else if (flagDesactivarSector1 == 1) {
+      luzDiaSector1 = 0;
+      Serial.print("a: ");
+      if (millis() - TdesactivoSector1 >= 2000) {
+        TdesactivoSector1 = millis();
+        contHorasDesactivado = contHorasDesactivado + 1;
+        Serial.print("Horas Desactivado: ");
+        Serial.println(contHorasDesactivado);
+      }
+    }
   }
+
+  if (contHorasActivado >= 5) {
+    Serial.print("Ciclo Cumplido");
+    flagDesactivarSector1 = 1;
+    contHorasActivado = 0;
+  }
+
+  if (contHorasDesactivado == 5) {
+    Serial.print("Ciclo desactivado Cumplido");
+    flagDesactivarSector1 = 0;
+    contHorasDesactivado = 0;
+  }  
+
+  if (relayStateSectorLuz[1] == 1) {
+    if (luzDiaSector1 == 1) {
+      Serial.println("Rele Activado");
+      delay(1000);
+    } else {
+      Serial.println("Rele desactivado");
+      delay(1000);
+    }
+  }
+  //relayStateSectorLuz[1];
 }
 
 //Envio de datos por MQTT a App Inventor
