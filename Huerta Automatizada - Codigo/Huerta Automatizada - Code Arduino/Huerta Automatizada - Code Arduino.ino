@@ -39,8 +39,9 @@ String fechaHoy = "a", fechaCultivo1 = "b", fechaCultivo2 = "c", fechaCultivo3 =
 bool relayStateSectorLuz[3] = { 0, 0, 0 };  //Sectores de Luz desactivados al inicializar - (Sector 1, Sector 2, Sector 3)
 
 static bool luzDiaSectores[3] = { 0, 0, 0 }, flagDesactivarSectores[3] = { 0, 0, 0 };
-static int cantHorasActivado[3] = { 0, 0, 0 }, cantHorasDesactivado[3] = { 0, 0, 0 };
+static int cantHorasActivado[3] = { 0, 0, 0 }, cantHorasDesactivado[3] = { 0, 0, 0 }, tiempoCosecha[3] = { 0, 0, 0 };
 
+int eleccion = 0;
 bool estado = 0;
 
 //void recived(String topic, String valor);
@@ -50,36 +51,50 @@ void setup() {
   Serial.begin(115200);  //Inicializa el serial begin a 115200
 
   EEPROM.begin(EEPROM_SIZE);  //Se inicializa EEPROM
-
+                              /*
+  for(int i=0; i<=18;i++){
+    EEPROM.write(i,0);
+    Serial.println("Numero: ");
+    Serial.print(i);
+    Serial.println(" eliminado.");
+  }
+*/
   //Asignamos las variables cargadas anteriormente
   luzDiaSectores[1] = EEPROM.read(0);
   luzDiaSectores[2] = EEPROM.read(1);
-  //luzDiaSectores[3] = EEPROM.read(2);
+  luzDiaSectores[3] = EEPROM.read(2);
 
   //Asignamos las variables cargadas anteriormente
   flagDesactivarSectores[1] = EEPROM.read(3);
   flagDesactivarSectores[2] = EEPROM.read(4);
-  //flagDesactivarSectores[3] = EEPROM.read(5);
+  flagDesactivarSectores[3] = EEPROM.read(5);
 
   //Asignamos las variables cargadas anteriormente
   cantHorasActivado[1] = EEPROM.read(6);
   cantHorasActivado[2] = EEPROM.read(7);
-  //cantHorasActivado[3] = EEPROM.read(8);
+  cantHorasActivado[3] = EEPROM.read(8);
 
   //Asignamos las variables cargadas anteriormente
   cantHorasDesactivado[1] = EEPROM.read(9);
   cantHorasDesactivado[2] = EEPROM.read(10);
-  //cantHorasDesactivado[3] = EEPROM.read(11);
+  cantHorasDesactivado[3] = EEPROM.read(11);
 
   //Sectores Activados - Activar Reles
-  relayStateSectorLuz[1] = EEPROM.read(13);
-  relayStateSectorLuz[2] = 0;  //EEPROM.read(14);
-  //relayStateSectorLuz[3] = EEPROM.read(15);
+  relayStateSectorLuz[1] = EEPROM.read(12);
+  relayStateSectorLuz[2] = EEPROM.read(13);
+  relayStateSectorLuz[3] = EEPROM.read(14);
+
+  //Asignamos los valores de tiempo de cosecha para cada sector
+  tiempoCosecha[1] = EEPROM.read(15);
+  tiempoCosecha[2] = EEPROM.read(16);
+  tiempoCosecha[3] = EEPROM.read(17);
 
   Serial.println("Estado de Sector 1: ");
   Serial.println(relayStateSectorLuz[1]);
   Serial.println("Estado de Sector 2: ");
   Serial.println(relayStateSectorLuz[2]);
+  Serial.println("Estado de Sector 3: ");
+  Serial.println(relayStateSectorLuz[3]);
 
   //Se define los pines de los reles como salidas
   pinMode(relaySector1_LUZ, OUTPUT);
@@ -147,7 +162,7 @@ void loop() {
 //Segun lo recibido desde la App segun el topic y mensaje recibido actua
 void recived(String topic, String valor) {
   int flagStateTomates;
-  int eleccion = 0;
+
   char* enviarTopic1 = "Fecha/cosecha1";
   char* enviarTopic2 = "Fecha/cosecha2";
   char* enviarTopic3 = "Fecha/cosecha3";
@@ -209,77 +224,77 @@ void recived(String topic, String valor) {
 
   if (topic == "Tomates/Fecha1") {
     eleccion = 1;
-    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Tomates/Fecha2") {
     eleccion = 1;
-    seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Tomates/Fecha3") {
     eleccion = 1;
-    seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Cebollas/Fecha1") {
     eleccion = 2;
-    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Cebollas/Fecha2") {
     eleccion = 2;
-    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Cebollas/Fecha3") {
     eleccion = 2;
-    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Lechuga/Fecha1") {
     eleccion = 3;
-    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Lechuga/Fecha2") {
     eleccion = 3;
-    seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Lechuga/Fecha3") {
     eleccion = 3;
-    seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Zanahoria/Fecha1") {
     eleccion = 4;
-    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Zanahoria/Fecha2") {
     eleccion = 4;
-    seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Zanahoria/Fecha3") {
     eleccion = 4;
-    seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Pimiento/Fecha1") {
     eleccion = 5;
-    seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Pimiento/Fecha2") {
     eleccion = 5;
-    seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Pimiento/Fecha3") {
     eleccion = 5;
-    seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
   }
 
   if (topic == "Reles/Sectores1") {
@@ -287,46 +302,43 @@ void recived(String topic, String valor) {
       relayStateSectorLuz[1] = 1;
       Serial.println("Rele Sector 1 activado");
       Serial.println("Estado de Sector 1: ");
-      Serial.println(valor); /*
-      EEPROM.put(13, 1);  //Direccion - Variable
-      EEPROM.commit();    //Confirmar*/
-
+      Serial.println(valor);
+      guardarEEPROM(12, relayStateSectorLuz[1]);
     } else if (valor == "0") {
       relayStateSectorLuz[1] = 0;
-      Serial.println("Rele Sector 1 desactivado"); /*
-      EEPROM.put(13, 0);  //Direccion - Variable
-      EEPROM.commit();    //Confirmar*/
+      Serial.println("Rele Sector 1 desactivado");
+      guardarEEPROM(12, relayStateSectorLuz[1]);
     }
   }
 
   if (topic == "Reles/Sectores2") {
+
     if (valor == "1") {
       relayStateSectorLuz[2] = 1;
-      Serial.println("Rele Sector 2 ACTIVADO"); /*
-      EEPROM.put(14, relayStateSectorLuz[2]);  //Direccion - Variable
-      EEPROM.commit();                         //Confirmar¿*/
+      Serial.println("Rele Sector 2 ACTIVADO");
+      Serial.println("Estado de Sector 2: ");
+      Serial.println(valor);
+      guardarEEPROM(13, relayStateSectorLuz[2]);
     } else if (valor == "0") {
       relayStateSectorLuz[2] = 0;
-      Serial.println("Rele Sector 2 DESACTIVADO"); /*
-      EEPROM.put(14, relayStateSectorLuz[2]);  //Direccion - Variable
-      EEPROM.commit();*/
+      Serial.println("Rele Sector 2 DESACTIVADO");
+      guardarEEPROM(13, relayStateSectorLuz[2]);
     }
   }
-  /*
-  if (topic = "Reles/S3") {
+
+  if (topic == "Reles/Sectores3") {
     if (valor == "1") {
       relayStateSectorLuz[3] = 1;
-      Serial.println("Rele Sector 3 activado");
-      EEPROM.put(15, relayStateSectorLuz[3]);  //Direccion - Variable
-      EEPROM.commit();                         //Confirmar
-    } else {
+      Serial.println("Rele Sector 3 ACTIVADO");
+      Serial.println("Estado de Sector 3: ");
+      Serial.println(valor);
+      guardarEEPROM(14, relayStateSectorLuz[3]);
+    } else if (valor == "0") {
       relayStateSectorLuz[3] = 0;
       Serial.println("Rele Sector 3 desactivado");
-      EEPROM.put(15, relayStateSectorLuz[3]);  //Direccion - Variable
-      EEPROM.commit();
+      guardarEEPROM(14, relayStateSectorLuz[3]);
     }
   }
-  */
 }
 
 
@@ -335,8 +347,7 @@ void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fecha
   char* topicAlertaSector2 = "alerta/Sector2";
   char* topicAlertaSector3 = "alerta/Sector3";
 
-  //fechaCultivo1 = concatenarfecha(fechaCultivo1);
-  fechaCultivo1 = concatenarfecha(fechaHoy);
+  fechaCultivo1 = concatenarfecha(fechaCultivo1);
   fechaCultivo2 = concatenarfecha(fechaCultivo2);
   fechaCultivo3 = concatenarfecha(fechaCultivo3);
   fechaHoy = concatenarfecha(fechaHoy);
@@ -347,34 +358,28 @@ void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fecha
   if (fechaCultivo1 == fechaHoy) {
     Serial.println("Alerta de Cosecha al sector 1");
     alertaCosecha(1, topicAlertaSector1);
-    flagGlobalActivarAlerta = 1;
-  } else if (fechaCultivo2 == fechaHoy) {
+  }
+  if (fechaCultivo2 == fechaHoy) {
     Serial.println("Alerta de Cosecha al sector 2");
     alertaCosecha(2, topicAlertaSector2);
-    flagGlobalActivarAlerta = 1;
-  } else if (fechaCultivo3 == fechaHoy) {
+  }
+  if (fechaCultivo3 == fechaHoy) {
     Serial.println("Alerta de Cosecha al sector 3");
     alertaCosecha(3, topicAlertaSector3);
-    flagGlobalActivarAlerta = 1;
   }
 }
 
 void alertaCosecha(int i, char* topic) {
-  if (flagGlobalActivarAlerta == 1) {
-    switch (i) {
-      case 1:
-        enviarAlertas(1, topic);
-        flagGlobalActivarAlerta = 0;
-        break;
-      case 2:
-        enviarAlertas(1, topic);
-        flagGlobalActivarAlerta = 0;
-        break;
-      case 3:
-        enviarAlertas(1, topic);
-        flagGlobalActivarAlerta = 0;
-        break;
-    }
+  switch (i) {
+    case 1:
+      enviarAlertas(1, topic);
+      break;
+    case 2:
+      enviarAlertas(1, topic);
+      break;
+    case 3:
+      enviarAlertas(1, topic);
+      break;
   }
 }
 
@@ -384,11 +389,11 @@ void enviarAlertas(int dato, char* topic) {
   dato1.toCharArray(a, 5);  //Se convierte el tipo de variable de String a Char ( Variable, cantidad de bytes a trabajar )
   Serial.println(a);
   MQTT_CLIENT.publish(topic, a);  //Envia la informacion dentro del arreglo char
-
+  /*
   fechaCultivo1 = "a";
   fechaCultivo2 = "b";
   fechaCultivo3 = "c";
-  flagGlobalActivarAlerta = 0;
+  flagGlobalActivarAlerta = 0;*/
 }
 
 String concatenarfecha(String Fecha) {
@@ -411,58 +416,129 @@ String concatenarfecha(String Fecha) {
 }
 
 //Envia la fecha de cosecha segun el cultivo elegido
-void seleccion_cultivo(int eleccion, String Fecha, char* topic) {
+int seleccion_cultivo(int eleccion, String Fecha, char* topic) {
   int cantMes;
+  int tiempoCosecha = 0;
   String fechaCosechada;
 
   switch (eleccion) {
     case 1:         //Eleccion de Tomates
       cantMes = 4;  //Se cosecha luego de los 4 meses
+      tiempoCosecha = 2;
       Serial.println("Comenzando el calculo de la cosecha de Tomates...");
       Serial.println("  ");
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
       Serial.print("Fecha de cosecha: ");
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
+
+      cantHorasActivado[1] = 0;
+      guardarEEPROM(6, cantHorasActivado[1]);
+
+      flagDesactivarSectores[1] = 0;
+      //Bandera para el contador de tiempo encendido
+      guardarEEPROM(3, flagDesactivarSectores[1]);
+
+      luzDiaSectores[1] = 1;
+      //Bandera de encendido para el los reles sector 1
+      guardarEEPROM(0, luzDiaSectores[1]);
+
+      return tiempoCosecha;
       break;
-    case 2:         //Eleccion de Cebollas
-      cantMes = 4;  //Se cosecha luego de los 4 meses
-      Serial.println("Comenzando el calculo de la cosecha de Tomates...");
+    case 2:               //Eleccion de Cebollas
+      cantMes = 4;        //Se cosecha luego de los 4 meses
+      tiempoCosecha = 3;  //En horas
+      Serial.println("Comenzando el calculo de la cosecha de Cebollas...");
       Serial.println("  ");
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
       Serial.print("Fecha de cosecha: ");
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
+
+      cantHorasActivado[1] = 0;
+      guardarEEPROM(6, cantHorasActivado[1]);
+
+      flagDesactivarSectores[1] = 0;
+      //Bandera para el contador de tiempo encendido
+      guardarEEPROM(3, flagDesactivarSectores[1]);
+
+      luzDiaSectores[1] = 1;
+      //Bandera de encendido para el los reles sector 1
+      guardarEEPROM(0, luzDiaSectores[1]);
+
+      return tiempoCosecha;
       break;
 
     case 3:         //Eleccion de Lechuga
       cantMes = 3;  //Se cosecha luego de los 3 meses
-      Serial.println("Comenzando el calculo de la cosecha de Tomates...");
+      tiempoCosecha = 4;
+      Serial.println("Comenzando el calculo de la cosecha de Lechuga...");
       Serial.println("  ");
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
       Serial.print("Fecha de cosecha: ");
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
+
+      cantHorasActivado[1] = 0;
+      guardarEEPROM(6, cantHorasActivado[1]);
+
+      flagDesactivarSectores[1] = 0;
+      //Bandera para el contador de tiempo encendido
+      guardarEEPROM(3, flagDesactivarSectores[1]);
+
+      luzDiaSectores[1] = 1;
+      //Bandera de encendido para el los reles sector 1
+      guardarEEPROM(0, luzDiaSectores[1]);
+
+      return tiempoCosecha;
       break;
 
     case 4:         //Eleccion de Zanahoria
       cantMes = 3;  //Se cosecha luego de los 3 meses
-      Serial.println("Comenzando el calculo de la cosecha de Tomates...");
+      tiempoCosecha = 5;
+      Serial.println("Comenzando el calculo de la cosecha de Zanahoria...");
       Serial.println("  ");
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
       Serial.print("Fecha de cosecha: ");
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
+
+      cantHorasActivado[1] = 0;
+      guardarEEPROM(6, cantHorasActivado[1]);
+
+      flagDesactivarSectores[1] = 0;
+      //Bandera para el contador de tiempo encendido
+      guardarEEPROM(3, flagDesactivarSectores[1]);
+
+      luzDiaSectores[1] = 1;
+      //Bandera de encendido para el los reles sector 1
+      guardarEEPROM(0, luzDiaSectores[1]);
+
+      return tiempoCosecha;
       break;
 
     case 5:         //Eleccion de Pimiento
       cantMes = 5;  //Se cosecha luego de los 5 meses
-      Serial.println("Comenzando el calculo de la cosecha de Tomates...");
+      tiempoCosecha = 6;
+      Serial.println("Comenzando el calculo de la cosecha de Pimiento...");
       Serial.println("  ");
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
       Serial.print("Fecha de cosecha: ");
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
+
+      cantHorasActivado[1] = 0;
+      guardarEEPROM(6, cantHorasActivado[1]);
+
+      flagDesactivarSectores[1] = 0;
+      //Bandera para el contador de tiempo encendido
+      guardarEEPROM(3, flagDesactivarSectores[1]);
+
+      luzDiaSectores[1] = 1;
+      //Bandera de encendido para el los reles sector 1
+      guardarEEPROM(0, luzDiaSectores[1]);
+
+      return tiempoCosecha;
       break;
   }
 }
@@ -547,57 +623,53 @@ void activarRelesSector(int array[]) {
   static unsigned long TactivoSector2 = millis();     //Variable a guardar el tiempo de millis
   static unsigned long TdesactivoSector2 = millis();  //Variable a guardar el tiempo de millis
 
-  // Tomates
+  static unsigned long TactivoSector3 = millis();     //Variable a guardar el tiempo de millis
+  static unsigned long TdesactivoSector3 = millis();  //Variable a guardar el tiempo de millis
+
 
   if (relayStateSectorLuz[1] == 1) {
     if (flagDesactivarSectores[1] == 0) {
       luzDiaSectores[1] = 1;
-      if (millis() - TactivoSector1 >= 2000) {
+      if (millis() - TactivoSector1 >= 10000) {
         TactivoSector1 = millis();
         cantHorasActivado[1] = cantHorasActivado[1] + 1;
-        Serial.print("HORAS SECTOR 1 ACTIVADO: ");
-        Serial.println(cantHorasActivado[1]);
+        //Serial.print("HORAS SECTOR 1 ACTIVADO: ");
+        //Serial.println(cantHorasActivado[1]);
 
         //Contador de horas Activado
-        EEPROM.put(6, cantHorasActivado[1]);  //Direccion - Variable
-        EEPROM.commit();                      //Confirmar
+        guardarEEPROM(6, cantHorasActivado[1]);
 
         //Bandera para el contador de tiempo encendido
-        EEPROM.put(3, flagDesactivarSectores[1]);  //Direccion - Variable
-        EEPROM.commit();                           //Confirmar
+        guardarEEPROM(3, flagDesactivarSectores[1]);
 
-        //Bandera de encendido para el sector 1
-        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
-        EEPROM.commit();                   //Confirmar
-        
+        //Bandera de encendido para el los reles sector 1
+        guardarEEPROM(0, luzDiaSectores[1]);
+
         Serial.println("RELE 1 ENCEDIDO");
         digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
-      if (cantHorasActivado[1] >= 5) {
+      if (cantHorasActivado[1] >= (24 - tiempoCosecha[1])) {
 
         Serial.print("Ciclo Cumplido");
         flagDesactivarSectores[1] = 1;
         cantHorasActivado[1] = 0;
 
         //Contador de horas Activado
-        EEPROM.put(6, cantHorasActivado[1]);  //Direccion - Variable
-        EEPROM.commit();                      //Confirmar
+        guardarEEPROM(6, cantHorasActivado[1]);
 
         //Bandera para el contador de tiempo encendido
-        EEPROM.put(4, flagDesactivarSectores[1]);  //Direccion - Variable
-        EEPROM.commit();                           //Confirmar
+        guardarEEPROM(4, flagDesactivarSectores[1]);
 
         //Bandera de encendido para el sector 1
-        EEPROM.put(0, luzDiaSectores[1]);  //Direccion - Variable
-        EEPROM.commit();                   //Confirmar
+        guardarEEPROM(0, luzDiaSectores[1]);
       }
     } else if (flagDesactivarSectores[1] == 1) {
       luzDiaSectores[1] = 0;
-      if (millis() - TdesactivoSector1 >= 2000) {
+      if (millis() - TdesactivoSector1 >= 10000) {
         TdesactivoSector1 = millis();
         cantHorasDesactivado[1] = cantHorasDesactivado[1] + 1;
-        Serial.print("HORAS SECTOR 1 DESACTIVADO: ");
-        Serial.println(cantHorasDesactivado[1]);
+        //Serial.print("HORAS SECTOR 1 DESACTIVADO: ");
+        //Serial.println(cantHorasDesactivado[1]);
 
         //Contador de horas desactivado
         guardarEEPROM(9, cantHorasDesactivado[1]);
@@ -607,12 +679,12 @@ void activarRelesSector(int array[]) {
 
         //Bandera de encendido para el sector 1
         guardarEEPROM(0, luzDiaSectores[1]);
-        
+
         Serial.println("RELE APAGADO");
         digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
 
-      if (cantHorasDesactivado[1] == 5) {
+      if (cantHorasDesactivado[1] == (24 - tiempoCosecha[1])) {
         Serial.println("Ciclo desactivado Cumplido");
         flagDesactivarSectores[1] = 0;  //Estado : Apagado
         cantHorasDesactivado[1] = 0;
@@ -632,23 +704,21 @@ void activarRelesSector(int array[]) {
   if (relayStateSectorLuz[2] == 1) {
     if (flagDesactivarSectores[2] == 0) {
       luzDiaSectores[2] = 1;
-      if (millis() - TactivoSector2 >= 2000) {
+      if (millis() - TactivoSector2 >= tiempoCosecha[2]) {
         TactivoSector2 = millis();
         cantHorasActivado[2] = cantHorasActivado[2] + 1;
-        Serial.print("Horas 2 Activo: ");
-        Serial.println(cantHorasActivado[2]);
+        //Serial.print("HORAS SECTIR 2 ACTIVADO: ");
+        //Serial.println(cantHorasActivado[2]);
 
-        //Contador de horas Activado
-        EEPROM.put(7, cantHorasActivado[2]);  //Direccion - Variable
-        EEPROM.commit();                      //Confirmar
+        //Contador de horas desactivado
+        guardarEEPROM(7, cantHorasActivado[2]);
 
-        //Bandera para el contador de tiempo encendido
-        EEPROM.put(4, flagDesactivarSectores[2]);  //Direccion - Variable
-        EEPROM.commit();                           //Confirmar
+        //Bandera para el contador de tiempo encendido/apagado
+        guardarEEPROM(4, flagDesactivarSectores[2]);
 
         //Bandera de encendido para el sector 1
-        EEPROM.put(1, luzDiaSectores[2]);  //Direccion - Variable
-        EEPROM.commit();                   //Confirmar
+        guardarEEPROM(1, luzDiaSectores[2]);
+
         Serial.println("RELE 2 ENCEDIDO");
         digitalWrite(relaySector2_LUZ, luzDiaSectores[2]);
       }
@@ -658,37 +728,32 @@ void activarRelesSector(int array[]) {
         flagDesactivarSectores[2] = 1;
         cantHorasActivado[2] = 0;
 
-        //Contador de horas Activado
-        EEPROM.put(7, cantHorasActivado[2]);  //Direccion - Variable
-        EEPROM.commit();                      //Confirmar
+        //Contador de horas desactivado
+        guardarEEPROM(7, cantHorasActivado[2]);
 
-        //Bandera para el contador de tiempo encendido
-        EEPROM.put(4, flagDesactivarSectores[2]);  //Direccion - Variable
-        EEPROM.commit();                           //Confirmar
+        //Bandera para el contador de tiempo encendido/apagado
+        guardarEEPROM(4, flagDesactivarSectores[2]);
 
         //Bandera de encendido para el sector 1
-        EEPROM.put(1, luzDiaSectores[2]);  //Direccion - Variable
-        EEPROM.commit();                   //Confirmar
+        guardarEEPROM(1, luzDiaSectores[2]);
       }
     } else if (flagDesactivarSectores[2] == 1) {
       luzDiaSectores[2] = 0;
-      if (millis() - TdesactivoSector2 >= 2000) {
+      if (millis() - TdesactivoSector2 >= tiempoCosecha[2]) {
         TdesactivoSector2 = millis();
         cantHorasDesactivado[2] = cantHorasDesactivado[2] + 1;
-        Serial.print("Horas 2 Desactivado: ");
-        Serial.println(cantHorasDesactivado[2]);
+        //Serial.print("Horas 2 Desactivado: ");
+        //Serial.println(cantHorasDesactivado[2]);
 
         //Contador de horas desactivado
-        EEPROM.put(10, cantHorasDesactivado[2]);  //Direccion - Variable
-        EEPROM.commit();                          //Confirmar
+        guardarEEPROM(10, cantHorasDesactivado[2]);
 
-        //Bandera para el contador de tiempo encendido
-        EEPROM.put(4, flagDesactivarSectores[2]);  //Direccion - Variable
-        EEPROM.commit();                           //Confirmar
+        //Bandera para el contador de tiempo encendido/apagado
+        guardarEEPROM(4, flagDesactivarSectores[2]);
 
         //Bandera de encendido para el sector 1
-        EEPROM.put(1, luzDiaSectores[2]);  //Direccion - Variable
-        EEPROM.commit();                   //Confirmar
+        guardarEEPROM(1, luzDiaSectores[2]);
+
         Serial.println("RELE 2 APAGADO");
         digitalWrite(relaySector2_LUZ, luzDiaSectores[1]);
       }
@@ -699,20 +764,90 @@ void activarRelesSector(int array[]) {
         cantHorasDesactivado[2] = 0;
 
         //Contador de horas desactivado
-        EEPROM.put(9, cantHorasDesactivado[2]);  //Direccion - Variable
-        EEPROM.commit();                         //Confirmar
+        guardarEEPROM(10, cantHorasDesactivado[2]);
 
         //Bandera para el contador de tiempo encendido/apagado
-        EEPROM.put(3, flagDesactivarSectores[2]);  //Direccion - Variable
-        EEPROM.commit();                           //Confirmar
+        guardarEEPROM(4, flagDesactivarSectores[2]);
 
         //Bandera de encendido para el sector 1
-        EEPROM.put(1, luzDiaSectores[2]);  //Direccion - Variable
-        EEPROM.commit();                   //Confirmar
+        guardarEEPROM(1, luzDiaSectores[2]);
       }
     }
   }
-  */
+
+  if (relayStateSectorLuz[3] == 1) {
+    if (flagDesactivarSectores[3] == 0) {
+      luzDiaSectores[3] = 1;
+      if (millis() - TactivoSector3 >= tiempoCosecha[3]) {
+        TactivoSector3 = millis();
+        cantHorasActivado[3] = cantHorasActivado[3] + 1;
+        //Serial.print("HORAS SECTOR 3 ACTIVADO: ");
+        //Serial.println(cantHorasActivado[1]);
+
+        //Contador de horas Activado
+        guardarEEPROM(8, cantHorasActivado[3]);
+
+        //Bandera para el contador de tiempo encendido
+        guardarEEPROM(5, flagDesactivarSectores[3]);
+
+        //Bandera de encendido para el los reles sector 1
+        guardarEEPROM(2, luzDiaSectores[3]);
+
+        Serial.println("RELE 3 ENCEDIDO");
+        digitalWrite(relaySector3_LUZ, luzDiaSectores[3]);
+      }
+      if (cantHorasActivado[3] >= 5) {
+
+        Serial.println("CICLO SECTOR 3 Cumplido");
+        flagDesactivarSectores[3] = 1;
+        cantHorasActivado[3] = 0;
+
+        //Contador de horas Activado
+        guardarEEPROM(8, cantHorasActivado[3]);
+
+        //Bandera para el contador de tiempo encendido
+        guardarEEPROM(5, flagDesactivarSectores[3]);
+
+        //Bandera de encendido para el sector 1
+        guardarEEPROM(2, luzDiaSectores[3]);
+      }
+    } else if (flagDesactivarSectores[3] == 1) {
+      luzDiaSectores[1] = 0;
+      if (millis() - TdesactivoSector3 >= tiempoCosecha[3]) {
+        TdesactivoSector3 = millis();
+        cantHorasDesactivado[3] = cantHorasDesactivado[3] + 1;
+        //Serial.print("HORAS SECTOR 3 DESACTIVADO: ");
+        //Serial.println(cantHorasDesactivado[3]);
+
+        //Contador de horas desactivado
+        guardarEEPROM(11, cantHorasDesactivado[3]);
+
+        //Bandera para el contador de tiempo encendido
+        guardarEEPROM(5, flagDesactivarSectores[3]);
+
+        //Bandera de encendido para el sector 1
+        guardarEEPROM(2, luzDiaSectores[3]);
+
+        Serial.println("RELE APAGADO");
+        digitalWrite(relaySector3_LUZ, luzDiaSectores[3]);
+      }
+
+      if (cantHorasDesactivado[3] == 5) {
+        Serial.println("CICLO SECTOR 3 desactivado - Cumplido");
+        flagDesactivarSectores[3] = 0;  //Estado : Apagado
+        cantHorasDesactivado[3] = 0;
+
+        //Contador de horas desactivado
+        guardarEEPROM(11, cantHorasDesactivado[3]);
+
+        //Bandera para el contador de tiempo encendido/apagado
+        guardarEEPROM(5, flagDesactivarSectores[3]);
+
+        //Bandera de encendido para el sector 1
+        guardarEEPROM(2, luzDiaSectores[3]);
+      }
+    }
+  }*/
 }
 
 void guardarEEPROM(int direccion, int memoria) {
