@@ -6,7 +6,17 @@
  *          - Pruebas de EEPROM exitosas.
  * 22/11/22 - EEPROM para gestionar el tiempo de accionamiento de los reles para activar la LUZ, en sector uno funcionando - Falta desctivar el sector una vez cosechado
 
- PROBLEMA: Al utilizar EEPROM el programa se desconfigura, no me deja comparar fechas.
+ * 25/11/22 - PROBLEMA: Al utilizar EEPROM el programa se desconfigura, no me deja comparar fechas (SOLUCIONADO)
+            - Los 3 sectores funcionando correctamente con los reles de LUZ
+            - Problemas solucionado: 
+              - Error al comparar fecha
+              - No devolvia la fecha del dia
+              - Error con substring (al comparar la cantidad de caracteres las fechas de cosecha)
+
+  Futuros temas a tratar: 
+            - Testear sensores de humedad
+            - Probar Electrovalvulas
+            - Crear sistema que detecta la cantidad de luz solar que reciben las plantas por dia, en base a eso, realizar calculos para compensar la luz natural artificial con la natural.
 */
 
 #include <WiFi.h>          // Para el ESP32
@@ -80,8 +90,8 @@ void setup() {
   cantHorasDesactivado[3] = EEPROM.read(11);
 
   //Sectores Activados - Activar Reles
-  relayStateSectorLuz[1] = EEPROM.read(12);
-  relayStateSectorLuz[2] = EEPROM.read(13);
+  relayStateSectorLuz[1] = EEPROM.read(13);
+  relayStateSectorLuz[2] = EEPROM.read(12);
   relayStateSectorLuz[3] = EEPROM.read(14);
 
   //Asignamos los valores de tiempo de cosecha para cada sector
@@ -303,11 +313,11 @@ void recived(String topic, String valor) {
       Serial.println("Rele Sector 1 activado");
       Serial.println("Estado de Sector 1: ");
       Serial.println(valor);
-      guardarEEPROM(12, relayStateSectorLuz[1]);
+      guardarEEPROM(13, relayStateSectorLuz[1]);
     } else if (valor == "0") {
       relayStateSectorLuz[1] = 0;
       Serial.println("Rele Sector 1 desactivado");
-      guardarEEPROM(12, relayStateSectorLuz[1]);
+      guardarEEPROM(13, relayStateSectorLuz[1]);
     }
   }
 
@@ -318,11 +328,11 @@ void recived(String topic, String valor) {
       Serial.println("Rele Sector 2 ACTIVADO");
       Serial.println("Estado de Sector 2: ");
       Serial.println(valor);
-      guardarEEPROM(13, relayStateSectorLuz[2]);
+      guardarEEPROM(12, relayStateSectorLuz[2]);
     } else if (valor == "0") {
       relayStateSectorLuz[2] = 0;
       Serial.println("Rele Sector 2 DESACTIVADO");
-      guardarEEPROM(13, relayStateSectorLuz[2]);
+      guardarEEPROM(12, relayStateSectorLuz[2]);
     }
   }
 
@@ -341,7 +351,6 @@ void recived(String topic, String valor) {
   }
 }
 
-
 void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fechaCultivo2, String fechaCultivo3) {
   char* topicAlertaSector1 = "alerta/Sector1";
   char* topicAlertaSector2 = "alerta/Sector2";
@@ -352,7 +361,13 @@ void comprobarFechasCosechas(String fechaHoy, String fechaCultivo1, String fecha
   fechaCultivo3 = concatenarfecha(fechaCultivo3);
   fechaHoy = concatenarfecha(fechaHoy);
 
+  Serial.print("Fecha de cultivo de Sector 1: ");
   Serial.println(fechaCultivo1);
+  Serial.print("Fecha de cultivo de Sector 2: ");
+  Serial.println(fechaCultivo2);
+  Serial.print("Fecha de cultivo de Sector 3: ");
+  Serial.println(fechaCultivo3);
+  Serial.print("Fecha de hoy: ");
   Serial.println(fechaHoy);
 
   if (fechaCultivo1 == fechaHoy) {
@@ -397,20 +412,42 @@ void enviarAlertas(int dato, char* topic) {
 }
 
 String concatenarfecha(String Fecha) {
-  int dia, mes, anio;
+  Serial.print("Fecha a concatenar: ");
+  Serial.println(Fecha);
+
+  int dia, mes, anio, cantCaracteres;
   String var;
   String dato;
 
-  var = Fecha.substring(0, 4);
-  dia = var.toInt();
-  var = Fecha.substring(4, 8);
-  mes = var.toInt();
-  var = Fecha.substring(8, 12);
-  anio = var.toInt();
+  cantCaracteres = Fecha.length();
+  Serial.print("Cantidad de caracteres: ");
+  Serial.println(cantCaracteres);
 
-  dato.concat(dia);
-  dato.concat(mes);
-  dato.concat(anio);
+  if (cantCaracteres == 10) {
+    var = Fecha.substring(0, 4);
+    dia = var.toInt();
+    var = Fecha.substring(4, 8);
+    mes = var.toInt();
+    var = Fecha.substring(8, 10);
+    anio = var.toInt();
+
+    dato.concat(dia);
+    dato.concat(mes);
+    dato.concat(anio);
+  } else if (cantCaracteres == 9) {
+
+    var = Fecha.substring(0, 4);
+    dia = var.toInt();
+    var = Fecha.substring(4, 7);
+    mes = var.toInt();
+    var = Fecha.substring(7, 9);
+    anio = var.toInt();
+
+    dato.concat(dia);
+    dato.concat(mes);
+    dato.concat(anio);
+  }
+
 
   return dato;
 }
@@ -554,6 +591,9 @@ void enviarDatosCosecha(String fechaCosecha, char* topic) {
 
 //Separa y divide la fecha para sumarle la cantidad de dias corrrespondientes para su cosecha - Retorna el la fecha de cosecha
 String fecha_cosecha(String Fecha, int cantMes) {
+  Serial.print("Fecha a concatenar: ");
+  Serial.println(Fecha);
+
   int dia, mes, anio;
   String var;
   String dato;
@@ -598,7 +638,7 @@ void menu_sector(int dato) {
   switch (dato) {
     case 1:  //Se habilita el sector N° 1
       //Habilitamos los sensores del sector N° 1 para mostrarlos:
-      Serial.println("Activado 1 ");
+      //Serial.println("Activado 1 ");
       topic_Sensor1 = "Inf/SensorTemperatura";
       topic_Sensor2 = "Inf/SensoHumedad1";
       topic_Sensor3 = "Inf/CantLuz";
@@ -648,7 +688,7 @@ void activarRelesSector(int array[]) {
         Serial.println("RELE 1 ENCEDIDO");
         digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
-      if (cantHorasActivado[1] >= (24 - tiempoCosecha[1])) {
+      if (cantHorasActivado[1] >= (tiempoCosecha[1])) {
 
         Serial.print("Ciclo Cumplido");
         flagDesactivarSectores[1] = 1;
