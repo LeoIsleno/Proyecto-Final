@@ -28,6 +28,7 @@ PubSubClient MQTT_CLIENT;
 
 #define EEPROM_SIZE 64
 
+#define sensorAgua 36
 #define fotoresistencia 39
 #define sensorSuelo3 35
 #define sensorSuelo2 34
@@ -37,6 +38,10 @@ PubSubClient MQTT_CLIENT;
 #define relaySector1_LUZ 15
 #define relaySector2_LUZ 2
 #define relaySector3_LUZ 4
+
+#define relaySector1_ELEC 23
+#define relaySector2_ELEC 22
+#define relaySector3_ELEC 1
 
 const char* ssid = "Leouu";          //Nombre del Wifi
 const char* password = "leo12345S";  //Contraseña del wifi
@@ -62,7 +67,7 @@ void setup() {
 
   EEPROM.begin(EEPROM_SIZE);  //Se inicializa EEPROM
                               /*
-  for(int i=0; i<=18;i++){
+  for(int i=0; i<=50;i++){
     EEPROM.write(i,0);
     Serial.println("Numero: ");
     Serial.print(i);
@@ -90,9 +95,9 @@ void setup() {
   cantHorasDesactivado[3] = EEPROM.read(11);
 
   //Sectores Activados - Activar Reles
-  relayStateSectorLuz[1] = EEPROM.read(13);
-  relayStateSectorLuz[2] = EEPROM.read(12);
-  relayStateSectorLuz[3] = EEPROM.read(14);
+  relayStateSectorLuz[1] = EEPROM.read(20);
+  relayStateSectorLuz[2] = EEPROM.read(25);
+  relayStateSectorLuz[3] = EEPROM.read(30);
 
   //Asignamos los valores de tiempo de cosecha para cada sector
   tiempoCosecha[1] = EEPROM.read(15);
@@ -313,11 +318,11 @@ void recived(String topic, String valor) {
       Serial.println("Rele Sector 1 activado");
       Serial.println("Estado de Sector 1: ");
       Serial.println(valor);
-      guardarEEPROM(13, relayStateSectorLuz[1]);
+      guardarEEPROM(20, relayStateSectorLuz[1]);
     } else if (valor == "0") {
       relayStateSectorLuz[1] = 0;
       Serial.println("Rele Sector 1 desactivado");
-      guardarEEPROM(13, relayStateSectorLuz[1]);
+      guardarEEPROM(20, relayStateSectorLuz[1]);
     }
   }
 
@@ -328,11 +333,11 @@ void recived(String topic, String valor) {
       Serial.println("Rele Sector 2 ACTIVADO");
       Serial.println("Estado de Sector 2: ");
       Serial.println(valor);
-      guardarEEPROM(12, relayStateSectorLuz[2]);
+      guardarEEPROM(25, relayStateSectorLuz[2]);
     } else if (valor == "0") {
       relayStateSectorLuz[2] = 0;
       Serial.println("Rele Sector 2 DESACTIVADO");
-      guardarEEPROM(12, relayStateSectorLuz[2]);
+      guardarEEPROM(25, relayStateSectorLuz[2]);
     }
   }
 
@@ -342,11 +347,11 @@ void recived(String topic, String valor) {
       Serial.println("Rele Sector 3 ACTIVADO");
       Serial.println("Estado de Sector 3: ");
       Serial.println(valor);
-      guardarEEPROM(14, relayStateSectorLuz[3]);
+      guardarEEPROM(30, relayStateSectorLuz[3]);
     } else if (valor == "0") {
       relayStateSectorLuz[3] = 0;
       Serial.println("Rele Sector 3 desactivado");
-      guardarEEPROM(14, relayStateSectorLuz[3]);
+      guardarEEPROM(30, relayStateSectorLuz[3]);
     }
   }
 }
@@ -469,16 +474,7 @@ int seleccion_cultivo(int eleccion, String Fecha, char* topic) {
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
 
-      cantHorasActivado[1] = 0;
-      guardarEEPROM(6, cantHorasActivado[1]);
-
-      flagDesactivarSectores[1] = 0;
-      //Bandera para el contador de tiempo encendido
-      guardarEEPROM(3, flagDesactivarSectores[1]);
-
-      luzDiaSectores[1] = 1;
-      //Bandera de encendido para el los reles sector 1
-      guardarEEPROM(0, luzDiaSectores[1]);
+      setValoresEEPROM();
 
       return tiempoCosecha;
       break;
@@ -492,16 +488,7 @@ int seleccion_cultivo(int eleccion, String Fecha, char* topic) {
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
 
-      cantHorasActivado[1] = 0;
-      guardarEEPROM(6, cantHorasActivado[1]);
-
-      flagDesactivarSectores[1] = 0;
-      //Bandera para el contador de tiempo encendido
-      guardarEEPROM(3, flagDesactivarSectores[1]);
-
-      luzDiaSectores[1] = 1;
-      //Bandera de encendido para el los reles sector 1
-      guardarEEPROM(0, luzDiaSectores[1]);
+      setValoresEEPROM();
 
       return tiempoCosecha;
       break;
@@ -516,16 +503,7 @@ int seleccion_cultivo(int eleccion, String Fecha, char* topic) {
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
 
-      cantHorasActivado[1] = 0;
-      guardarEEPROM(6, cantHorasActivado[1]);
-
-      flagDesactivarSectores[1] = 0;
-      //Bandera para el contador de tiempo encendido
-      guardarEEPROM(3, flagDesactivarSectores[1]);
-
-      luzDiaSectores[1] = 1;
-      //Bandera de encendido para el los reles sector 1
-      guardarEEPROM(0, luzDiaSectores[1]);
+      setValoresEEPROM();
 
       return tiempoCosecha;
       break;
@@ -540,16 +518,7 @@ int seleccion_cultivo(int eleccion, String Fecha, char* topic) {
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
 
-      cantHorasActivado[1] = 0;
-      guardarEEPROM(6, cantHorasActivado[1]);
-
-      flagDesactivarSectores[1] = 0;
-      //Bandera para el contador de tiempo encendido
-      guardarEEPROM(3, flagDesactivarSectores[1]);
-
-      luzDiaSectores[1] = 1;
-      //Bandera de encendido para el los reles sector 1
-      guardarEEPROM(0, luzDiaSectores[1]);
+      setValoresEEPROM();
 
       return tiempoCosecha;
       break;
@@ -564,20 +533,29 @@ int seleccion_cultivo(int eleccion, String Fecha, char* topic) {
       Serial.println(fechaCosechada);
       enviarDatosCosecha(fechaCosechada, topic);
 
-      cantHorasActivado[1] = 0;
-      guardarEEPROM(6, cantHorasActivado[1]);
-
-      flagDesactivarSectores[1] = 0;
-      //Bandera para el contador de tiempo encendido
-      guardarEEPROM(3, flagDesactivarSectores[1]);
-
-      luzDiaSectores[1] = 1;
-      //Bandera de encendido para el los reles sector 1
-      guardarEEPROM(0, luzDiaSectores[1]);
+      setValoresEEPROM();
 
       return tiempoCosecha;
       break;
   }
+}
+
+void setValoresEEPROM() {
+
+  guardarEEPROM(13, relayStateSectorLuz[1]);
+  guardarEEPROM(12, relayStateSectorLuz[2]);
+  guardarEEPROM(14, relayStateSectorLuz[3]);
+
+  cantHorasActivado[1] = 0;
+  guardarEEPROM(6, cantHorasActivado[1]);
+
+  flagDesactivarSectores[1] = 0;
+  //Bandera para el contador de tiempo encendido
+  guardarEEPROM(3, flagDesactivarSectores[1]);
+
+  luzDiaSectores[1] = 1;
+  //Bandera de encendido para el los reles sector 1
+  guardarEEPROM(0, luzDiaSectores[1]);
 }
 
 void enviarDatosCosecha(String fechaCosecha, char* topic) {
@@ -657,6 +635,41 @@ void activarRelesSector(int array[]) {
   int senSuelo2 = *(array + 4);  //Sensor de Suelo 2
   int senSuelo3 = *(array + 5);  //Sensor de Suelo 3
 
+  senSuelo1 = ((senSuelo1 * 100)/4095);
+  senSuelo2 = ((senSuelo2 * 100)/4095);
+  senSuelo3 = ((senSuelo3 * 100)/4095);
+
+  Serial.println("Sensor de Suelo 1:");
+  Serial.print(senSuelo1);
+  Serial.println("%");
+  delay(2000);
+  Serial.println("Sensor de Suelo 2:");
+  Serial.print(senSuelo2);
+  Serial.println("%");
+  delay(2000);
+  Serial.println("Sensor de Suelo 3:");
+  Serial.print(senSuelo3);
+  Serial.println("%");
+  delay(2000);
+
+  //activarRelesLuz();
+
+  //activarRelesElectrovalvulas(int senSuelo1, int senSuelo2, int senSuelo3);
+}
+
+void activarRelesElectrovalvulas(int senSuelo1, int senSuelo2, int senSuelo3) {
+  if (senSuelo1 <= 65) {
+    digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
+  }
+  if (senSuelo2 <= 65) {
+    digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
+  }
+  if (senSuelo3 <= 65) {
+    digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
+  }
+}
+
+void activarRelesLuz() {
   static unsigned long TactivoSector1 = millis();     //Variable a guardar el tiempo de millis
   static unsigned long TdesactivoSector1 = millis();  //Variable a guardar el tiempo de millis
 
@@ -665,7 +678,6 @@ void activarRelesSector(int array[]) {
 
   static unsigned long TactivoSector3 = millis();     //Variable a guardar el tiempo de millis
   static unsigned long TdesactivoSector3 = millis();  //Variable a guardar el tiempo de millis
-
 
   if (relayStateSectorLuz[1] == 1) {
     if (flagDesactivarSectores[1] == 0) {
@@ -688,7 +700,7 @@ void activarRelesSector(int array[]) {
         Serial.println("RELE 1 ENCEDIDO");
         digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
-      if (cantHorasActivado[1] >= (tiempoCosecha[1])) {
+      if (cantHorasActivado[1] >= tiempoCosecha[1]) {
 
         Serial.print("Ciclo Cumplido");
         flagDesactivarSectores[1] = 1;
@@ -740,11 +752,11 @@ void activarRelesSector(int array[]) {
       }
     }
   }
-  /*
+
   if (relayStateSectorLuz[2] == 1) {
     if (flagDesactivarSectores[2] == 0) {
       luzDiaSectores[2] = 1;
-      if (millis() - TactivoSector2 >= tiempoCosecha[2]) {
+      if (millis() - TactivoSector2 >= 10000) {
         TactivoSector2 = millis();
         cantHorasActivado[2] = cantHorasActivado[2] + 1;
         //Serial.print("HORAS SECTIR 2 ACTIVADO: ");
@@ -762,7 +774,7 @@ void activarRelesSector(int array[]) {
         Serial.println("RELE 2 ENCEDIDO");
         digitalWrite(relaySector2_LUZ, luzDiaSectores[2]);
       }
-      if (cantHorasActivado[2] >= 5) {
+      if (cantHorasActivado[2] >= tiempoCosecha[2]) {
 
         Serial.print("Ciclo 2 Cumplido");
         flagDesactivarSectores[2] = 1;
@@ -798,7 +810,7 @@ void activarRelesSector(int array[]) {
         digitalWrite(relaySector2_LUZ, luzDiaSectores[1]);
       }
 
-      if (cantHorasDesactivado[2] == 5) {
+      if (cantHorasDesactivado[2] == (24 - tiempoCosecha[2])) {
         Serial.println("Ciclo 2 desactivado Cumplido");
         flagDesactivarSectores[2] = 0;  //Estado : Apagado
         cantHorasDesactivado[2] = 0;
@@ -818,7 +830,7 @@ void activarRelesSector(int array[]) {
   if (relayStateSectorLuz[3] == 1) {
     if (flagDesactivarSectores[3] == 0) {
       luzDiaSectores[3] = 1;
-      if (millis() - TactivoSector3 >= tiempoCosecha[3]) {
+      if (millis() - TactivoSector3 >= 10000) {
         TactivoSector3 = millis();
         cantHorasActivado[3] = cantHorasActivado[3] + 1;
         //Serial.print("HORAS SECTOR 3 ACTIVADO: ");
@@ -836,7 +848,7 @@ void activarRelesSector(int array[]) {
         Serial.println("RELE 3 ENCEDIDO");
         digitalWrite(relaySector3_LUZ, luzDiaSectores[3]);
       }
-      if (cantHorasActivado[3] >= 5) {
+      if (cantHorasActivado[3] >= tiempoCosecha[3]) {
 
         Serial.println("CICLO SECTOR 3 Cumplido");
         flagDesactivarSectores[3] = 1;
@@ -853,7 +865,7 @@ void activarRelesSector(int array[]) {
       }
     } else if (flagDesactivarSectores[3] == 1) {
       luzDiaSectores[1] = 0;
-      if (millis() - TdesactivoSector3 >= tiempoCosecha[3]) {
+      if (millis() - TdesactivoSector3 >= 10000) {
         TdesactivoSector3 = millis();
         cantHorasDesactivado[3] = cantHorasDesactivado[3] + 1;
         //Serial.print("HORAS SECTOR 3 DESACTIVADO: ");
@@ -872,7 +884,7 @@ void activarRelesSector(int array[]) {
         digitalWrite(relaySector3_LUZ, luzDiaSectores[3]);
       }
 
-      if (cantHorasDesactivado[3] == 5) {
+      if (cantHorasDesactivado[3] == (24 - tiempoCosecha[3])) {
         Serial.println("CICLO SECTOR 3 desactivado - Cumplido");
         flagDesactivarSectores[3] = 0;  //Estado : Apagado
         cantHorasDesactivado[3] = 0;
@@ -887,7 +899,7 @@ void activarRelesSector(int array[]) {
         guardarEEPROM(2, luzDiaSectores[3]);
       }
     }
-  }*/
+  }
 }
 
 void guardarEEPROM(int direccion, int memoria) {
