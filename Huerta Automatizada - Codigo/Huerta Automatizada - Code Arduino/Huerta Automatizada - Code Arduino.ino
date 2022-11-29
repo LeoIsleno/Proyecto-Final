@@ -13,10 +13,10 @@
               - No devolvia la fecha del dia
               - Error con substring (al comparar la cantidad de caracteres las fechas de cosecha)
 
-  Futuros temas a tratar: 
-            - Testear sensores de humedad
+ * 29/11/22 - Testear sensores de humedad
             - Probar Electrovalvulas
             - Crear sistema que detecta la cantidad de luz solar que reciben las plantas por dia, en base a eso, realizar calculos para compensar la luz natural artificial con la natural.
+            - FASE DE PRUEBAS
 */
 
 #include <WiFi.h>          // Para el ESP32
@@ -40,8 +40,8 @@ PubSubClient MQTT_CLIENT;
 #define relaySector3_LUZ 4
 
 #define relaySector1_ELEC 23
-#define relaySector2_ELEC 22
-#define relaySector3_ELEC 1
+#define relaySector2_ELEC 5
+#define relaySector3_ELEC 21
 
 const char* ssid = "Leouu";          //Nombre del Wifi
 const char* password = "leo12345S";  //Contraseña del wifi
@@ -54,7 +54,7 @@ String fechaHoy = "a", fechaCultivo1 = "b", fechaCultivo2 = "c", fechaCultivo3 =
 bool relayStateSectorLuz[3] = { 0, 0, 0 };  //Sectores de Luz desactivados al inicializar - (Sector 1, Sector 2, Sector 3)
 
 static bool luzDiaSectores[3] = { 0, 0, 0 }, flagDesactivarSectores[3] = { 0, 0, 0 };
-static int cantHorasActivado[3] = { 0, 0, 0 }, cantHorasDesactivado[3] = { 0, 0, 0 }, tiempoCosecha[3] = { 0, 0, 0 };
+static int cantHorasActivado[4] = { 0, 0, 0, 0 }, cantHorasDesactivado[3] = { 0, 0, 0 }, tiempoCosecha[3] = { 0, 0, 0 }, cantHumedad[3] = { 0, 0, 0 };
 
 int eleccion = 0;
 bool estado = 0;
@@ -66,14 +66,14 @@ void setup() {
   Serial.begin(115200);  //Inicializa el serial begin a 115200
 
   EEPROM.begin(EEPROM_SIZE);  //Se inicializa EEPROM
-                              /*
+                              /*                
   for(int i=0; i<=50;i++){
     EEPROM.write(i,0);
     Serial.println("Numero: ");
     Serial.print(i);
     Serial.println(" eliminado.");
-  }
-*/
+  }*/
+
   //Asignamos las variables cargadas anteriormente
   luzDiaSectores[1] = EEPROM.read(0);
   luzDiaSectores[2] = EEPROM.read(1);
@@ -104,6 +104,9 @@ void setup() {
   tiempoCosecha[2] = EEPROM.read(16);
   tiempoCosecha[3] = EEPROM.read(17);
 
+  //Contador de Cantidad de Luz natural que recibe la Huerta
+  cantHorasActivado[4] = EEPROM.read(18);
+
   Serial.println("Estado de Sector 1: ");
   Serial.println(relayStateSectorLuz[1]);
   Serial.println("Estado de Sector 2: ");
@@ -115,6 +118,10 @@ void setup() {
   pinMode(relaySector1_LUZ, OUTPUT);
   pinMode(relaySector2_LUZ, OUTPUT);
   pinMode(relaySector3_LUZ, OUTPUT);
+
+  pinMode(relaySector1_ELEC, OUTPUT);
+  pinMode(relaySector2_ELEC, OUTPUT);
+  pinMode(relaySector3_ELEC, OUTPUT);
 
   //Inicializamos los reles con el ultimo estado
   digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
@@ -170,8 +177,18 @@ void loop() {
   if (!MQTT_CLIENT.connected()) {
     reconnect();
   }
+  /*
+  digitalWrite(5, 0);
+  Serial.println("Rele Sector 2 activado");
+  delay(2000);
+  digitalWrite(5, 1);
+  Serial.println("Rele Sector 2 desactivado");
+  delay(2000);
+*/
+
+
   menu_sector(StateSectorActivate);
-  MQTT_CLIENT.loop();  // Testea la suscripcion
+  MQTT_CLIENT.loop();  // Testea la suscripcion*/
 }
 
 //Segun lo recibido desde la App segun el topic y mensaje recibido actua
@@ -240,76 +257,91 @@ void recived(String topic, String valor) {
   if (topic == "Tomates/Fecha1") {
     eleccion = 1;
     tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[1] = 60;
   }
 
   if (topic == "Tomates/Fecha2") {
     eleccion = 1;
     tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[2] = 60;
   }
 
   if (topic == "Tomates/Fecha3") {
     eleccion = 1;
     tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[3] = 60;
   }
 
   if (topic == "Cebollas/Fecha1") {
     eleccion = 2;
     tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[1] = 45;
   }
 
   if (topic == "Cebollas/Fecha2") {
     eleccion = 2;
     tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[2] = 45;
   }
 
   if (topic == "Cebollas/Fecha3") {
     eleccion = 2;
     tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[3] = 45;
   }
 
   if (topic == "Lechuga/Fecha1") {
     eleccion = 3;
     tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[1] = 55;
   }
 
   if (topic == "Lechuga/Fecha2") {
     eleccion = 3;
     tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[2] = 55;
   }
 
   if (topic == "Lechuga/Fecha3") {
     eleccion = 3;
     tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[3] = 55;
   }
 
   if (topic == "Zanahoria/Fecha1") {
     eleccion = 4;
     tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[1] = 65;
   }
 
   if (topic == "Zanahoria/Fecha2") {
     eleccion = 4;
     tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[2] = 65;
   }
 
   if (topic == "Zanahoria/Fecha3") {
     eleccion = 4;
     tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[3] = 65;
   }
 
   if (topic == "Pimiento/Fecha1") {
     eleccion = 5;
     tiempoCosecha[1] = seleccion_cultivo(eleccion, valor, enviarTopic1);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[1] = 70;
   }
 
   if (topic == "Pimiento/Fecha2") {
     eleccion = 5;
     tiempoCosecha[2] = seleccion_cultivo(eleccion, valor, enviarTopic2);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[2] = 70;
   }
 
   if (topic == "Pimiento/Fecha3") {
     eleccion = 5;
     tiempoCosecha[3] = seleccion_cultivo(eleccion, valor, enviarTopic3);  //Eleccion de planta a cultivar - Fecha de cultivo a calcular cosecha
+    cantHumedad[3] = 70;
   }
 
   if (topic == "Reles/Sectores1") {
@@ -466,7 +498,7 @@ int seleccion_cultivo(int eleccion, String Fecha, char* topic) {
   switch (eleccion) {
     case 1:         //Eleccion de Tomates
       cantMes = 4;  //Se cosecha luego de los 4 meses
-      tiempoCosecha = 2;
+      tiempoCosecha = 7;
       Serial.println("Comenzando el calculo de la cosecha de Tomates...");
       Serial.println("  ");
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
@@ -480,7 +512,7 @@ int seleccion_cultivo(int eleccion, String Fecha, char* topic) {
       break;
     case 2:               //Eleccion de Cebollas
       cantMes = 4;        //Se cosecha luego de los 4 meses
-      tiempoCosecha = 3;  //En horas
+      tiempoCosecha = 5;  //En horas
       Serial.println("Comenzando el calculo de la cosecha de Cebollas...");
       Serial.println("  ");
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
@@ -525,7 +557,7 @@ int seleccion_cultivo(int eleccion, String Fecha, char* topic) {
 
     case 5:         //Eleccion de Pimiento
       cantMes = 5;  //Se cosecha luego de los 5 meses
-      tiempoCosecha = 6;
+      tiempoCosecha = 7;
       Serial.println("Comenzando el calculo de la cosecha de Pimiento...");
       Serial.println("  ");
       fechaCosechada = fecha_cosecha(Fecha, cantMes);
@@ -635,41 +667,68 @@ void activarRelesSector(int array[]) {
   int senSuelo2 = *(array + 4);  //Sensor de Suelo 2
   int senSuelo3 = *(array + 5);  //Sensor de Suelo 3
 
-  senSuelo1 = ((senSuelo1 * 100)/4095);
-  senSuelo2 = ((senSuelo2 * 100)/4095);
-  senSuelo3 = ((senSuelo3 * 100)/4095);
+  senSuelo1 = ((senSuelo1 * 100) / 4095);
+  senSuelo2 = ((senSuelo2 * 100) / 4095);
+  senSuelo3 = ((senSuelo3 * 100) / 4095);
 
-  Serial.println("Sensor de Suelo 1:");
-  Serial.print(senSuelo1);
-  Serial.println("%");
-  delay(2000);
-  Serial.println("Sensor de Suelo 2:");
-  Serial.print(senSuelo2);
-  Serial.println("%");
-  delay(2000);
-  Serial.println("Sensor de Suelo 3:");
-  Serial.print(senSuelo3);
-  Serial.println("%");
-  delay(2000);
+  Fres = ((Fres * 100) / 4095);
 
-  //activarRelesLuz();
+  activarRelesLuz(Fres);
 
-  //activarRelesElectrovalvulas(int senSuelo1, int senSuelo2, int senSuelo3);
+  activarRelesElectrovalvulas(senSuelo1, senSuelo2, senSuelo3);
 }
 
 void activarRelesElectrovalvulas(int senSuelo1, int senSuelo2, int senSuelo3) {
-  if (senSuelo1 <= 65) {
-    digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
-  }
-  if (senSuelo2 <= 65) {
-    digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
-  }
-  if (senSuelo3 <= 65) {
-    digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
+  static unsigned long tiempo = millis();  //Variable a guardar el tiempo de millis
+  int cont = 0;
+
+  cantHumedad[1] = 100 - cantHumedad[1];
+  cantHumedad[2] = 100 - cantHumedad[2];
+  cantHumedad[3] = 100 - cantHumedad[3];
+
+  if (millis() - tiempo >= 1000) {
+    tiempo = millis();
+    cont = cont + 1;
+    /*
+    Serial.println("Sensor de Suelo 1:");
+    Serial.print(senSuelo1);
+    Serial.println("%");
+
+    Serial.println("Sensor de Suelo 2:");
+    Serial.print(senSuelo2);
+    Serial.println("%");
+
+    Serial.println("Sensor de Suelo 3:");
+    Serial.print(senSuelo3);
+    Serial.println("%");
+*/
+    if (cantHumedad[1] > senSuelo1) {
+      digitalWrite(relaySector1_ELEC, 0);
+      //Serial.println("Electrovalvula 1 encendida");
+
+    } else if (cantHumedad[1] < senSuelo1) {
+      digitalWrite(relaySector1_ELEC, 1);
+      //Serial.println("Electrovalvula 1 apagada");
+    }
+    if (cantHumedad[2] > senSuelo2) {
+      digitalWrite(relaySector2_ELEC, 0);
+      Serial.println("Electrovalvula 2 encendida");
+    } else if (cantHumedad[2] < senSuelo2) {
+      digitalWrite(relaySector2_ELEC, 1);
+
+      //Serial.println("Electrovalvula 2 apagada");
+    }
+    if (cantHumedad[3] > senSuelo3) {
+      digitalWrite(relaySector3_ELEC, 0);
+      //Serial.println("Electrovalvula 3 encendida");
+    } else if (cantHumedad[3] < senSuelo3) {
+      digitalWrite(relaySector3_ELEC, 1);
+      //Serial.println("Electrovalvula 3 apagada");
+    }
   }
 }
 
-void activarRelesLuz() {
+void activarRelesLuz(int Fres) {
   static unsigned long TactivoSector1 = millis();     //Variable a guardar el tiempo de millis
   static unsigned long TdesactivoSector1 = millis();  //Variable a guardar el tiempo de millis
 
@@ -678,6 +737,21 @@ void activarRelesLuz() {
 
   static unsigned long TactivoSector3 = millis();     //Variable a guardar el tiempo de millis
   static unsigned long TdesactivoSector3 = millis();  //Variable a guardar el tiempo de millis
+
+  static unsigned long TactivoFotoresis = millis();  //Variable a guardar el tiempo de millis
+  //static unsigned long TdesactivoSector3 = millis();  //Variable a guardar el tiempo de millis
+
+
+  if (Fres == 100) {
+    if (millis() - TactivoFotoresis >= 1000) {
+      TactivoFotoresis = millis();
+      cantHorasActivado[4] = cantHorasActivado[4] + 1;
+      Serial.println("Cantidad de horas encendido sensor de Luz: ");
+      Serial.println(cantHorasActivado[4]);
+
+      guardarEEPROM(18, cantHorasActivado[4]);
+    }
+  }
 
   if (relayStateSectorLuz[1] == 1) {
     if (flagDesactivarSectores[1] == 0) {
@@ -700,7 +774,7 @@ void activarRelesLuz() {
         Serial.println("RELE 1 ENCEDIDO");
         digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
-      if (cantHorasActivado[1] >= tiempoCosecha[1]) {
+      if (cantHorasActivado[1] + (cantHorasActivado[4] * 3) >= tiempoCosecha[1]) {  //Multiplicamos por 3 debido a que 1 hora de luz natural equivalen a 3 de luz artificial
 
         Serial.print("Ciclo Cumplido");
         flagDesactivarSectores[1] = 1;
@@ -774,7 +848,7 @@ void activarRelesLuz() {
         Serial.println("RELE 2 ENCEDIDO");
         digitalWrite(relaySector2_LUZ, luzDiaSectores[2]);
       }
-      if (cantHorasActivado[2] >= tiempoCosecha[2]) {
+      if (cantHorasActivado[2] + (cantHorasActivado[4] * 3) >= tiempoCosecha[2]) {
 
         Serial.print("Ciclo 2 Cumplido");
         flagDesactivarSectores[2] = 1;
@@ -848,7 +922,7 @@ void activarRelesLuz() {
         Serial.println("RELE 3 ENCEDIDO");
         digitalWrite(relaySector3_LUZ, luzDiaSectores[3]);
       }
-      if (cantHorasActivado[3] >= tiempoCosecha[3]) {
+      if (cantHorasActivado[3] + (cantHorasActivado[4] * 3) >= tiempoCosecha[3]) {
 
         Serial.println("CICLO SECTOR 3 Cumplido");
         flagDesactivarSectores[3] = 1;
