@@ -30,10 +30,11 @@ PubSubClient MQTT_CLIENT;
 
 #define sensorAgua 36
 #define fotoresistencia 39
+#define sensorTemp 33
+
 #define sensorSuelo3 35
 #define sensorSuelo2 34
 #define sensorSuelo1 32
-#define sensorTemp 33
 
 #define relaySector1_LUZ 15
 #define relaySector2_LUZ 2
@@ -41,7 +42,7 @@ PubSubClient MQTT_CLIENT;
 
 #define relaySector1_ELEC 23
 #define relaySector2_ELEC 5
-#define relaySector3_ELEC 21
+#define relaySector3_ELEC 22
 
 const char* ssid = "Leouu";          //Nombre del Wifi
 const char* password = "leo12345S";  //Contraseña del wifi
@@ -66,14 +67,13 @@ void setup() {
   Serial.begin(115200);  //Inicializa el serial begin a 115200
 
   EEPROM.begin(EEPROM_SIZE);  //Se inicializa EEPROM
-                              /*                
-  for(int i=0; i<=50;i++){
-    EEPROM.write(i,0);
-    Serial.println("Numero: ");
-    Serial.print(i);
-    Serial.println(" eliminado.");
-  }*/
 
+  /*
+  EEPROM.write(relayStateSectorLuz[1], 0);
+  EEPROM.write(relayStateSectorLuz[2], 0);
+  EEPROM.write(relayStateSectorLuz[3], 0);
+
+*/
   //Asignamos las variables cargadas anteriormente
   luzDiaSectores[1] = EEPROM.read(0);
   luzDiaSectores[2] = EEPROM.read(1);
@@ -177,16 +177,6 @@ void loop() {
   if (!MQTT_CLIENT.connected()) {
     reconnect();
   }
-  /*
-  digitalWrite(5, 0);
-  Serial.println("Rele Sector 2 activado");
-  delay(2000);
-  digitalWrite(5, 1);
-  Serial.println("Rele Sector 2 desactivado");
-  delay(2000);
-*/
-
-
   menu_sector(StateSectorActivate);
   MQTT_CLIENT.loop();  // Testea la suscripcion*/
 }
@@ -635,8 +625,11 @@ void menu_sector(int dato) {
 
   int sensores[5] = { 0, 0, 0, 0, 0 };  //Temperatura, fotoresistencia, Sensor suelo1, Sensor suelo2, Sensor suelo3,
 
-  sensores[1] = analogRead(sensorTemp) * 0.1;                //  10mv/°C PIN 33
-  sensores[2] = (analogRead(fotoresistencia) / 4095) * 100;  // PIN 39
+  int sensorTemperatura = 0;
+
+  sensorTemperatura = analogRead(sensorTemp) * 0.1;  //  10mv/°C PIN 33
+
+  sensores[2] = analogRead(fotoresistencia);  // PIN 39
   sensores[3] = analogRead(sensorSuelo1);
   sensores[4] = analogRead(sensorSuelo2);
   sensores[5] = analogRead(sensorSuelo3);
@@ -645,7 +638,13 @@ void menu_sector(int dato) {
   char* topic_Sensor2 = "";
   char* topic_Sensor3 = "";
 
-  switch (dato) {
+  topic_Sensor1 = "Inf/SensorTemperatura";
+
+  enviar_datoSensor_MQTT(sensorTemperatura, topic_Sensor1);
+
+  activarRelesSector(sensores);
+
+  /*switch (dato) {
     case 1:  //Se habilita el sector N° 1
       //Habilitamos los sensores del sector N° 1 para mostrarlos:
       //Serial.println("Activado 1 ");
@@ -656,8 +655,7 @@ void menu_sector(int dato) {
       //activarRelesSector(sensores[1], sensores[2], sensores[0]);
       enviar_datoSensor_MQTT(sensores[0], sensores[1], sensores[2], topic_Sensor1, topic_Sensor2, topic_Sensor3);
       break;
-  }
-  activarRelesSector(sensores);
+  }*/
 }
 
 void activarRelesSector(int array[]) {
@@ -671,9 +669,7 @@ void activarRelesSector(int array[]) {
   senSuelo2 = ((senSuelo2 * 100) / 4095);
   senSuelo3 = ((senSuelo3 * 100) / 4095);
 
-  Fres = ((Fres * 100) / 4095);
-
-  activarRelesLuz(Fres);
+  activarRelesLuz();
 
   activarRelesElectrovalvulas(senSuelo1, senSuelo2, senSuelo3);
 }
@@ -728,7 +724,7 @@ void activarRelesElectrovalvulas(int senSuelo1, int senSuelo2, int senSuelo3) {
   }
 }
 
-void activarRelesLuz(int Fres) {
+void activarRelesLuz() {
   static unsigned long TactivoSector1 = millis();     //Variable a guardar el tiempo de millis
   static unsigned long TdesactivoSector1 = millis();  //Variable a guardar el tiempo de millis
 
@@ -740,10 +736,13 @@ void activarRelesLuz(int Fres) {
 
   static unsigned long TactivoFotoresis = millis();  //Variable a guardar el tiempo de millis
   //static unsigned long TdesactivoSector3 = millis();  //Variable a guardar el tiempo de millis
-
-
+  /*
+  int Fres = analogRead(fotoresistencia);
+  Fres = ((Fres * 100) / 4095);
+  //Serial.println(Fres);
+  
   if (Fres == 100) {
-    if (millis() - TactivoFotoresis >= 1000) {
+    if (millis() - TactivoFotoresis >= 10000) {
       TactivoFotoresis = millis();
       cantHorasActivado[4] = cantHorasActivado[4] + 1;
       Serial.println("Cantidad de horas encendido sensor de Luz: ");
@@ -751,7 +750,7 @@ void activarRelesLuz(int Fres) {
 
       guardarEEPROM(18, cantHorasActivado[4]);
     }
-  }
+  } else */
 
   if (relayStateSectorLuz[1] == 1) {
     if (flagDesactivarSectores[1] == 0) {
@@ -774,7 +773,7 @@ void activarRelesLuz(int Fres) {
         Serial.println("RELE 1 ENCEDIDO");
         digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
-      if (cantHorasActivado[1] + (cantHorasActivado[4] * 3) >= tiempoCosecha[1]) {  //Multiplicamos por 3 debido a que 1 hora de luz natural equivalen a 3 de luz artificial
+      if (cantHorasActivado[1] >= tiempoCosecha[1]) {  //Multiplicamos por 3 debido a que 1 hora de luz natural equivalen a 3 de luz artificial
 
         Serial.print("Ciclo Cumplido");
         flagDesactivarSectores[1] = 1;
@@ -806,7 +805,7 @@ void activarRelesLuz(int Fres) {
         //Bandera de encendido para el sector 1
         guardarEEPROM(0, luzDiaSectores[1]);
 
-        Serial.println("RELE APAGADO");
+        Serial.println("RELE SECTOR 1 APAGADO");
         digitalWrite(relaySector1_LUZ, luzDiaSectores[1]);
       }
 
@@ -848,7 +847,7 @@ void activarRelesLuz(int Fres) {
         Serial.println("RELE 2 ENCEDIDO");
         digitalWrite(relaySector2_LUZ, luzDiaSectores[2]);
       }
-      if (cantHorasActivado[2] + (cantHorasActivado[4] * 3) >= tiempoCosecha[2]) {
+      if (cantHorasActivado[2] >= tiempoCosecha[2]) {
 
         Serial.print("Ciclo 2 Cumplido");
         flagDesactivarSectores[2] = 1;
@@ -865,7 +864,7 @@ void activarRelesLuz(int Fres) {
       }
     } else if (flagDesactivarSectores[2] == 1) {
       luzDiaSectores[2] = 0;
-      if (millis() - TdesactivoSector2 >= tiempoCosecha[2]) {
+      if (millis() - TdesactivoSector2 >= 10000) {
         TdesactivoSector2 = millis();
         cantHorasDesactivado[2] = cantHorasDesactivado[2] + 1;
         //Serial.print("Horas 2 Desactivado: ");
@@ -880,11 +879,10 @@ void activarRelesLuz(int Fres) {
         //Bandera de encendido para el sector 1
         guardarEEPROM(1, luzDiaSectores[2]);
 
-        Serial.println("RELE 2 APAGADO");
-        digitalWrite(relaySector2_LUZ, luzDiaSectores[1]);
+        Serial.println("RELE SECTOR 2 APAGADO");
+        digitalWrite(relaySector2_LUZ, luzDiaSectores[2]);
       }
-
-      if (cantHorasDesactivado[2] == (24 - tiempoCosecha[2])) {
+      if (cantHorasDesactivado[2] >= (24 - tiempoCosecha[2])) {
         Serial.println("Ciclo 2 desactivado Cumplido");
         flagDesactivarSectores[2] = 0;  //Estado : Apagado
         cantHorasDesactivado[2] = 0;
@@ -922,7 +920,7 @@ void activarRelesLuz(int Fres) {
         Serial.println("RELE 3 ENCEDIDO");
         digitalWrite(relaySector3_LUZ, luzDiaSectores[3]);
       }
-      if (cantHorasActivado[3] + (cantHorasActivado[4] * 3) >= tiempoCosecha[3]) {
+      if (cantHorasActivado[3] >= tiempoCosecha[3]) {
 
         Serial.println("CICLO SECTOR 3 Cumplido");
         flagDesactivarSectores[3] = 1;
@@ -954,7 +952,7 @@ void activarRelesLuz(int Fres) {
         //Bandera de encendido para el sector 1
         guardarEEPROM(2, luzDiaSectores[3]);
 
-        Serial.println("RELE APAGADO");
+        Serial.println("RELE SECTOR 3 APAGADO");
         digitalWrite(relaySector3_LUZ, luzDiaSectores[3]);
       }
 
@@ -982,7 +980,7 @@ void guardarEEPROM(int direccion, int memoria) {
 }
 
 //Envio de datos por MQTT a App Inventor
-void enviar_datoSensor_MQTT(float lecturaTemp, float lecturaLuz, int lecturaSuelo, char* topic_Sensor1, char* topic_Sensor2, char* topic_Sensor3) {
+void enviar_datoSensor_MQTT(float lecturaTemp, char* topic_Sensor1) {
   static unsigned long lastMillis_publish_1 = millis();  //Variable a guardar el tiempo de millis
   static unsigned long lastMillis_publish_2 = millis();  //Variable a guardar el tiempo de millis
   static unsigned long lastMillis_publish_3 = millis();  //Variable a guardar el tiempo de millis
@@ -996,6 +994,7 @@ void enviar_datoSensor_MQTT(float lecturaTemp, float lecturaLuz, int lecturaSuel
     //Serial.println(a);
     MQTT_CLIENT.publish(topic_Sensor1, a);  //Envia la informacion dentro del arreglo char
   }
+  /*
   if (millis() - lastMillis_publish_2 >= 2500) {
     lastMillis_publish_2 = millis();
     String dato2 = String(lecturaSuelo);  //Se convierte el tipo de variable de int a String
@@ -1013,7 +1012,7 @@ void enviar_datoSensor_MQTT(float lecturaTemp, float lecturaLuz, int lecturaSuel
     //Serial.print("Valores de Luz: ");
     //Serial.println(c);
     MQTT_CLIENT.publish(topic_Sensor3, c);  //Envia la informacion dentro del arreglo char
-  }
+  }*/
 }
 
 // Reconecta con MQTT broker
